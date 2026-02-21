@@ -216,7 +216,7 @@
 // ============================================================
 // FLUFF FLIGHT – Full Game
 // ============================================================
-const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector, Vertices } = Matter;
+const { Engine, Bodies, Body, Composite, Events } = Matter;
 
 // --- Constants ---
 const W = 700, H = 850;
@@ -281,12 +281,26 @@ const startBtn = document.getElementById('startBtn');
 const zenBtn = document.getElementById('zenBtn');
 const zenCooldownOverlay = zenBtn.querySelector('.cooldown-overlay');
 
+// --- Helpers ---
+function roundedRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
 // --- Physics Engine ---
-let engine, runner;
+let engine;
 
 function initEngine() {
   engine = Engine.create({ gravity: { x: 0, y: 1 } });
-  runner = Runner.create();
 
   // Walls (left, right, ceiling)
   const wallOpts = { isStatic: true, restitution: 0.5, friction: 0.1, label: 'wall' };
@@ -692,7 +706,6 @@ function resetGame() {
   // Clear physics world
   Composite.clear(engine.world, false);
   Events.off(engine, 'collisionStart', handleCollisions);
-  Runner.stop(runner);
 
   // Reset state
   state.lives = MAX_LIVES;
@@ -715,7 +728,6 @@ function resetGame() {
 
   // Re-init
   initEngine();
-  Runner.start(runner, engine);
   updateHUD();
 
   levelDisplayEl.textContent = 'Level 1';
@@ -814,8 +826,7 @@ function drawObject(obj) {
     ctx.fillStyle = '#1a1a2e';
     ctx.strokeStyle = PASTEL.piano;
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.roundRect(-w/2, -h/2, w, h, 4);
+    roundedRect(ctx, -w/2, -h/2, w, h, 4);
     ctx.fill();
     ctx.stroke();
     // Keys
@@ -838,8 +849,7 @@ function drawFluffZone() {
   ctx.shadowBlur = 20;
   ctx.fillStyle = PASTEL.zone;
   ctx.globalAlpha = 0.3 + 0.1 * Math.sin(Date.now() * 0.003);
-  ctx.beginPath();
-  ctx.roundRect(zone.x, zone.y, zone.w, zone.h, 10);
+  roundedRect(ctx, zone.x, zone.y, zone.w, zone.h, 10);
   ctx.fill();
   ctx.restore();
 
@@ -847,8 +857,7 @@ function drawFluffZone() {
   ctx.strokeStyle = PASTEL.zone;
   ctx.lineWidth = 3;
   ctx.setLineDash([8, 4]);
-  ctx.beginPath();
-  ctx.roundRect(zone.x, zone.y, zone.w, zone.h, 10);
+  roundedRect(ctx, zone.x, zone.y, zone.w, zone.h, 10);
   ctx.stroke();
   ctx.setLineDash([]);
 
@@ -1017,7 +1026,6 @@ startBtn.addEventListener('click', () => {
   overlay.classList.add('hidden');
   state.running = true;
   initEngine();
-  Runner.start(runner, engine);
   updateHUD();
   lastTime = 0;
   state.spawnTimer = 800;
