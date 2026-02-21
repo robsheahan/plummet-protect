@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluff Flight – A Physics-Based Juggling Game</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+  }
+  #gameContainer {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(255, 182, 193, 0.3);
+  }
+  canvas { display: block; cursor: crosshair; }
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #hud > div { pointer-events: auto; }
+  .hud-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    padding: 8px 14px;
+    border-radius: 20px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .life-icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #fff, #ffb6c1);
+    box-shadow: 0 0 8px rgba(255,182,193,0.6);
+    transition: opacity 0.3s, transform 0.3s;
+    display: inline-block;
+  }
+  .life-icon.empty { opacity: 0.2; transform: scale(0.7); }
+  .life-icon.quarter {
+    background: radial-gradient(circle at 35% 35%, #fff 25%, #ffb6c1 25%, transparent 50%, transparent);
+    opacity: 0.5;
+  }
+  .strike-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #555;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+  .strike-dot.active {
+    background: #ff6b6b;
+    box-shadow: 0 0 10px rgba(255,107,107,0.8);
+  }
+  #zenBtn {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.4);
+    background: radial-gradient(circle at 35% 35%, #e0c3fc, #8ec5fc);
+    cursor: pointer;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 0 20px rgba(142,197,252,0.4);
+    pointer-events: auto;
+  }
+  #zenBtn:hover { transform: scale(1.1); box-shadow: 0 0 30px rgba(142,197,252,0.7); }
+  #zenBtn.cooldown {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: rgba(255,255,255,0.1);
+  }
+  #zenBtn .cooldown-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background: conic-gradient(transparent var(--cd), rgba(0,0,0,0.5) var(--cd));
+  }
+  #comboDisplay {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10;
+    pointer-events: none;
+  }
+  #levelDisplay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-size: 48px;
+    font-weight: 700;
+    text-shadow: 0 0 40px rgba(255,182,193,0.8);
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  #overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26,26,46,0.85);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    color: #fff;
+  }
+  #overlay h1 {
+    font-size: 52px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffb6c1, #e0c3fc, #8ec5fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  #overlay p { font-size: 16px; opacity: 0.7; margin-bottom: 30px; }
+  #overlay .instructions {
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.8;
+    opacity: 0.8;
+    max-width: 400px;
+    margin-bottom: 30px;
+  }
+  #startBtn {
+    padding: 14px 40px;
+    font-size: 18px;
+    font-weight: 700;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(135deg, #ffb6c1, #e0c3fc);
+    color: #1a1a2e;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 20px rgba(255,182,193,0.4);
+  }
+  #startBtn:hover { transform: scale(1.05); box-shadow: 0 4px 30px rgba(255,182,193,0.6); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-section" id="livesSection">
+      <span>Lives:</span>
+      <span id="livesIcons"></span>
+    </div>
+    <div class="hud-section" id="levelSection">
+      <span>Level <span id="levelNum">1</span></span>
+    </div>
+    <div class="hud-section" id="strikesSection">
+      <span>Crashes:</span>
+      <span id="strikeDots"></span>
+    </div>
+  </div>
+
+  <div id="comboDisplay">Combo: <span id="comboNum">0</span> / 10</div>
+  <div id="levelDisplay"></div>
+
+  <button id="zenBtn" title="Zen Mode (Slow Motion)">
+    <span>&#9775;</span>
+    <div class="cooldown-overlay" style="display:none;"></div>
+  </button>
+
+  <div id="overlay">
+    <h1>Fluff Flight</h1>
+    <p>A Physics-Based Juggling Game</p>
+    <div class="instructions">
+      &#127912; Draw lines with your mouse to bounce falling objects<br>
+      &#127919; Guide them into the Fluff Zone at the bottom<br>
+      &#10084;&#65039; You have 4 lives &mdash; earn more by juggling!<br>
+      &#9888;&#65039; 3 crashes and you restart from Level 1<br>
+      &#9775; Use Zen Mode for slow-motion help
+    </div>
+    <button id="startBtn">Start Playing</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// FLUFF FLIGHT – Full Game
+// ============================================================
+const { Engine, Render, Runner, Bodies, Body, Composite, Events, Vector, Vertices } = Matter;
+
+// --- Constants ---
+const W = 700, H = 850;
+const MAX_LIVES = 4;
+const MAX_STRIKES = 3;
+const COMBO_TARGET = 10;
+const LINE_LIFETIME = 2000;
+const ZEN_DURATION = 5000;
+const ZEN_COOLDOWN = 20000;
+const FLUFF_ZONE_BASE_W = 300;
+const FLUFF_ZONE_SHRINK = 20;
+const PASTEL = {
+  bg: '#fdf2f8',
+  zone: '#a7f3d0',
+  zoneGlow: 'rgba(167,243,208,0.3)',
+  line: '#c4b5fd',
+  lineGlow: 'rgba(196,181,253,0.5)',
+  vase: '#fda4af',
+  piano: '#93c5fd',
+  egg: '#fef3c7',
+  particle: ['#ffb6c1','#e0c3fc','#8ec5fc','#a7f3d0','#fde68a','#fda4af'],
+  floor: '#374151',
+};
+
+// --- Game State ---
+let state = {
+  lives: MAX_LIVES,
+  lifeProgress: 0,   // 0..3 quarter increments toward next life
+  strikes: 0,
+  combo: 0,
+  level: 1,
+  score: 0,
+  zenActive: false,
+  zenOnCooldown: false,
+  zenTimer: 0,
+  zenCooldownTimer: 0,
+  running: false,
+  drawnLines: [],     // {body, createdAt}
+  particles: [],
+  floatingTexts: [],
+  fallingObjects: [], // {body, type, caught}
+  spawnTimer: 0,
+  spawnInterval: 2500,
+};
+
+// --- DOM ---
+const canvas = document.getElementById('gameCanvas');
+const container = document.getElementById('gameContainer');
+canvas.width = W;
+canvas.height = H;
+container.style.width = W + 'px';
+container.style.height = H + 'px';
+const ctx = canvas.getContext('2d');
+
+const livesIconsEl = document.getElementById('livesIcons');
+const strikeDotsEl = document.getElementById('strikeDots');
+const comboNumEl = document.getElementById('comboNum');
+const levelNumEl = document.getElementById('levelNum');
+const levelDisplayEl = document.getElementById('levelDisplay');
+const overlay = document.getElementById('overlay');
+const startBtn = document.getElementById('startBtn');
+const zenBtn = document.getElementById('zenBtn');
+const zenCooldownOverlay = zenBtn.querySelector('.cooldown-overlay');
+
+// --- Physics Engine ---
+let engine, runner;
+
+function initEngine() {
+  engine = Engine.create({ gravity: { x: 0, y: 1 } });
+  runner = Runner.create();
+
+  // Walls (left, right, ceiling)
+  const wallOpts = { isStatic: true, restitution: 0.5, friction: 0.1, label: 'wall' };
+  const leftWall = Bodies.rectangle(-10, H / 2, 20, H, wallOpts);
+  const rightWall = Bodies.rectangle(W + 10, H / 2, 20, H, wallOpts);
+  const ceiling = Bodies.rectangle(W / 2, -10, W, 20, wallOpts);
+
+  // Floor (detect crashes)
+  const floor = Bodies.rectangle(W / 2, H + 10, W, 20, {
+    isStatic: true, label: 'floor', restitution: 0, friction: 1,
+  });
+
+  Composite.add(engine.world, [leftWall, rightWall, ceiling, floor]);
+
+  // Collision detection
+  Events.on(engine, 'collisionStart', handleCollisions);
+}
+
+// --- Fluff Zone ---
+function getFluffZoneWidth() {
+  return Math.max(80, FLUFF_ZONE_BASE_W - (state.level - 1) * FLUFF_ZONE_SHRINK);
+}
+
+function getFluffZoneRect() {
+  const w = state.zenActive ? getFluffZoneWidth() + 80 : getFluffZoneWidth();
+  const h = 40;
+  const x = (W - w) / 2;
+  const y = H - h - 5;
+  return { x, y, w, h };
+}
+
+// --- Object Types ---
+const OBJ_TYPES = ['vase', 'piano', 'egg'];
+
+function randomObjType() {
+  return OBJ_TYPES[Math.floor(Math.random() * OBJ_TYPES.length)];
+}
+
+function spawnObject() {
+  const type = randomObjType();
+  const x = 60 + Math.random() * (W - 120);
+  let body;
+
+  const opts = {
+    restitution: 0.6,
+    friction: 0.1,
+    frictionAir: 0.01,
+    label: 'fallingObj',
+    density: 0.002,
+  };
+
+  if (type === 'egg') {
+    // Egg: small ellipse (circle approximation)
+    const r = state.zenActive ? 14 : 18;
+    body = Bodies.circle(x, -30, r, { ...opts, restitution: 0.5 });
+  } else if (type === 'vase') {
+    // Vase: taller rectangle
+    const w = state.zenActive ? 22 : 28;
+    const h = state.zenActive ? 34 : 42;
+    body = Bodies.rectangle(x, -30, w, h, { ...opts, restitution: 0.55 });
+  } else {
+    // Piano: wider rectangle
+    const w = state.zenActive ? 36 : 44;
+    const h = state.zenActive ? 26 : 32;
+    body = Bodies.rectangle(x, -30, w, h, { ...opts, restitution: 0.65 });
+  }
+
+  Composite.add(engine.world, body);
+  state.fallingObjects.push({ body, type, caught: false, shattered: false });
+}
+
+// --- Line Drawing ---
+let drawing = false;
+let lineStart = null;
+
+canvas.addEventListener('mousedown', (e) => {
+  if (!state.running) return;
+  const r = canvas.getBoundingClientRect();
+  lineStart = { x: e.clientX - r.left, y: e.clientY - r.top };
+  drawing = true;
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (!drawing) return;
+  const r = canvas.getBoundingClientRect();
+  state.drawPreview = { x: e.clientX - r.left, y: e.clientY - r.top };
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (!drawing || !lineStart) { drawing = false; return; }
+  const r = canvas.getBoundingClientRect();
+  const end = { x: e.clientX - r.left, y: e.clientY - r.top };
+  const dx = end.x - lineStart.x;
+  const dy = end.y - lineStart.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+
+  if (len > 20) {
+    createLine(lineStart, end);
+  }
+  drawing = false;
+  lineStart = null;
+  state.drawPreview = null;
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (!state.running) return;
+  const t = e.touches[0];
+  const r = canvas.getBoundingClientRect();
+  lineStart = { x: t.clientX - r.left, y: t.clientY - r.top };
+  drawing = true;
+});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  if (!drawing) return;
+  const t = e.touches[0];
+  const r = canvas.getBoundingClientRect();
+  state.drawPreview = { x: t.clientX - r.left, y: t.clientY - r.top };
+});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (!drawing || !lineStart) { drawing = false; return; }
+  const t = e.changedTouches[0];
+  const r = canvas.getBoundingClientRect();
+  const end = { x: t.clientX - r.left, y: t.clientY - r.top };
+  const dx = end.x - lineStart.x;
+  const dy = end.y - lineStart.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len > 20) createLine(lineStart, end);
+  drawing = false;
+  lineStart = null;
+  state.drawPreview = null;
+});
+
+function createLine(start, end) {
+  const cx = (start.x + end.x) / 2;
+  const cy = (start.y + end.y) / 2;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx);
+
+  const body = Bodies.rectangle(cx, cy, len, 8, {
+    isStatic: true,
+    angle: angle,
+    restitution: 0.8,
+    friction: 0.2,
+    label: 'mattress',
+    chamfer: { radius: 4 },
+  });
+
+  Composite.add(engine.world, body);
+  state.drawnLines.push({
+    body,
+    createdAt: Date.now(),
+    start: { ...start },
+    end: { ...end },
+    opacity: 1,
+  });
+}
+
+// --- Collision Handling ---
+function handleCollisions(event) {
+  for (const pair of event.pairs) {
+    const a = pair.bodyA;
+    const b = pair.bodyB;
+
+    // Object hits mattress
+    if ((a.label === 'mattress' && b.label === 'fallingObj') ||
+        (b.label === 'mattress' && a.label === 'fallingObj')) {
+      onBounce();
+    }
+
+    // Object hits floor
+    if ((a.label === 'floor' && b.label === 'fallingObj') ||
+        (b.label === 'floor' && a.label === 'fallingObj')) {
+      const objBody = a.label === 'fallingObj' ? a : b;
+      onFloorHit(objBody);
+    }
+  }
+}
+
+function onBounce() {
+  state.combo++;
+  comboNumEl.textContent = state.combo;
+
+  if (state.combo >= COMBO_TARGET) {
+    state.combo = 0;
+    comboNumEl.textContent = '0';
+    earnQuarterLife();
+  }
+
+  // Bounce particles
+  addFloatingText('+1', W / 2, H - 60, '#c4b5fd');
+}
+
+function earnQuarterLife() {
+  if (state.lives >= MAX_LIVES) return;
+  state.lifeProgress++;
+  if (state.lifeProgress >= 4) {
+    state.lifeProgress = 0;
+    state.lives = Math.min(MAX_LIVES, state.lives + 1);
+  }
+  addFloatingText('+0.25 Life!', W / 2, H / 2, '#a7f3d0');
+  updateHUD();
+}
+
+function onFloorHit(objBody) {
+  const obj = state.fallingObjects.find(o => o.body === objBody);
+  if (!obj || obj.shattered) return;
+  obj.shattered = true;
+
+  // Shatter particles
+  spawnShatterParticles(objBody.position.x, objBody.position.y, obj.type);
+
+  // Remove from physics
+  Composite.remove(engine.world, objBody);
+
+  // Crash
+  state.strikes++;
+  state.combo = 0;
+  comboNumEl.textContent = '0';
+
+  addFloatingText('CRASH!', objBody.position.x, objBody.position.y - 30, '#ff6b6b');
+
+  if (state.strikes >= MAX_STRIKES) {
+    // Game over – reset to level 1
+    setTimeout(() => resetGame(), 1000);
+  }
+
+  updateHUD();
+}
+
+// --- Fluff Zone Catching ---
+function checkFluffZone() {
+  const zone = getFluffZoneRect();
+
+  for (const obj of state.fallingObjects) {
+    if (obj.caught || obj.shattered) continue;
+    const pos = obj.body.position;
+
+    if (pos.x >= zone.x && pos.x <= zone.x + zone.w &&
+        pos.y >= zone.y && pos.y <= zone.y + zone.h) {
+      obj.caught = true;
+      Composite.remove(engine.world, obj.body);
+      state.score += 100;
+
+      // Success particles
+      for (let i = 0; i < 20; i++) {
+        state.particles.push({
+          x: pos.x, y: pos.y,
+          vx: (Math.random() - 0.5) * 6,
+          vy: -Math.random() * 5 - 2,
+          life: 1,
+          color: PASTEL.particle[Math.floor(Math.random() * PASTEL.particle.length)],
+          size: 3 + Math.random() * 4,
+        });
+      }
+
+      addFloatingText('Caught!', pos.x, pos.y - 20, '#a7f3d0');
+
+      // Check if all objects are resolved – next level
+      const remaining = state.fallingObjects.filter(o => !o.caught && !o.shattered);
+      if (remaining.length === 0) {
+        setTimeout(() => nextLevel(), 500);
+      }
+    }
+  }
+}
+
+// --- Particles ---
+function spawnShatterParticles(x, y, type) {
+  const color = type === 'vase' ? PASTEL.vase : type === 'piano' ? PASTEL.piano : PASTEL.egg;
+  for (let i = 0; i < 25; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5;
+    state.particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - 2,
+      life: 1,
+      color: color,
+      size: 2 + Math.random() * 5,
+      gravity: 0.1,
+    });
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += (p.gravity || 0.05);
+    p.life -= dt * 0.001;
+    if (p.life <= 0) state.particles.splice(i, 1);
+  }
+}
+
+function addFloatingText(text, x, y, color) {
+  state.floatingTexts.push({ text, x, y, life: 1, color });
+}
+
+function updateFloatingTexts(dt) {
+  for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+    const t = state.floatingTexts[i];
+    t.y -= 1;
+    t.life -= dt * 0.001;
+    if (t.life <= 0) state.floatingTexts.splice(i, 1);
+  }
+}
+
+// --- Zen Mode ---
+zenBtn.addEventListener('click', activateZen);
+
+function activateZen() {
+  if (!state.running || state.zenActive || state.zenOnCooldown) return;
+
+  state.zenActive = true;
+  state.zenTimer = ZEN_DURATION;
+  engine.gravity.y = 0.5;
+
+  // Shrink all active falling objects
+  for (const obj of state.fallingObjects) {
+    if (!obj.caught && !obj.shattered) {
+      Body.scale(obj.body, 0.75, 0.75);
+    }
+  }
+
+  zenBtn.classList.add('cooldown');
+}
+
+function updateZen(dt) {
+  if (state.zenActive) {
+    state.zenTimer -= dt;
+    if (state.zenTimer <= 0) {
+      state.zenActive = false;
+      engine.gravity.y = 1;
+      state.zenOnCooldown = true;
+      state.zenCooldownTimer = ZEN_COOLDOWN;
+    }
+  }
+
+  if (state.zenOnCooldown) {
+    state.zenCooldownTimer -= dt;
+    const pct = 1 - (state.zenCooldownTimer / ZEN_COOLDOWN);
+    zenCooldownOverlay.style.display = 'block';
+    zenCooldownOverlay.style.setProperty('--cd', (pct * 100) + '%');
+    if (state.zenCooldownTimer <= 0) {
+      state.zenOnCooldown = false;
+      zenBtn.classList.remove('cooldown');
+      zenCooldownOverlay.style.display = 'none';
+    }
+  }
+}
+
+// --- Line Cleanup ---
+function updateLines() {
+  const now = Date.now();
+  for (let i = state.drawnLines.length - 1; i >= 0; i--) {
+    const line = state.drawnLines[i];
+    const age = now - line.createdAt;
+    line.opacity = Math.max(0, 1 - age / LINE_LIFETIME);
+    if (age > LINE_LIFETIME) {
+      Composite.remove(engine.world, line.body);
+      state.drawnLines.splice(i, 1);
+    }
+  }
+}
+
+// --- Spawning ---
+function updateSpawning(dt) {
+  state.spawnTimer -= dt;
+  if (state.spawnTimer <= 0) {
+    const activeCount = state.fallingObjects.filter(o => !o.caught && !o.shattered).length;
+    // Spawn more at higher levels, but cap active objects
+    const maxActive = Math.min(2 + Math.floor(state.level / 2), 5);
+    if (activeCount < maxActive) {
+      spawnObject();
+    }
+    state.spawnInterval = Math.max(1200, 2500 - state.level * 150);
+    state.spawnTimer = state.spawnInterval;
+  }
+}
+
+// --- Level / Reset ---
+function nextLevel() {
+  state.level++;
+  levelNumEl.textContent = state.level;
+  state.fallingObjects = [];
+  state.spawnTimer = 1000;
+
+  // Flash level text
+  levelDisplayEl.textContent = 'Level ' + state.level;
+  levelDisplayEl.style.opacity = '1';
+  setTimeout(() => { levelDisplayEl.style.opacity = '0'; }, 1500);
+}
+
+function resetGame() {
+  // Clear physics world
+  Composite.clear(engine.world, false);
+  Events.off(engine, 'collisionStart', handleCollisions);
+  Runner.stop(runner);
+
+  // Reset state
+  state.lives = MAX_LIVES;
+  state.lifeProgress = 0;
+  state.strikes = 0;
+  state.combo = 0;
+  state.level = 1;
+  state.score = 0;
+  state.zenActive = false;
+  state.zenOnCooldown = false;
+  state.drawnLines = [];
+  state.particles = [];
+  state.floatingTexts = [];
+  state.fallingObjects = [];
+  state.spawnTimer = 1500;
+  state.spawnInterval = 2500;
+
+  zenBtn.classList.remove('cooldown');
+  zenCooldownOverlay.style.display = 'none';
+
+  // Re-init
+  initEngine();
+  Runner.start(runner, engine);
+  updateHUD();
+
+  levelDisplayEl.textContent = 'Level 1';
+  levelDisplayEl.style.opacity = '1';
+  setTimeout(() => { levelDisplayEl.style.opacity = '0'; }, 1500);
+}
+
+// --- HUD ---
+function updateHUD() {
+  // Lives
+  let html = '';
+  for (let i = 0; i < MAX_LIVES; i++) {
+    if (i < state.lives) {
+      html += '<span class="life-icon"></span>';
+    } else if (i === state.lives && state.lifeProgress > 0) {
+      // Partial life
+      html += `<span class="life-icon" style="opacity:${0.3 + state.lifeProgress * 0.175}"></span>`;
+    } else {
+      html += '<span class="life-icon empty"></span>';
+    }
+  }
+  livesIconsEl.innerHTML = html;
+
+  // Strikes
+  let shtml = '';
+  for (let i = 0; i < MAX_STRIKES; i++) {
+    shtml += `<span class="strike-dot${i < state.strikes ? ' active' : ''}"></span>`;
+  }
+  strikeDotsEl.innerHTML = shtml;
+
+  levelNumEl.textContent = state.level;
+  comboNumEl.textContent = state.combo;
+}
+
+// --- Drawing ---
+function drawObject(obj) {
+  const pos = obj.body.position;
+  const angle = obj.body.angle;
+
+  ctx.save();
+  ctx.translate(pos.x, pos.y);
+  ctx.rotate(angle);
+
+  if (obj.type === 'egg') {
+    const r = state.zenActive ? 14 : 18;
+    // Egg shape
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.8, r, 0, 0, Math.PI * 2);
+    ctx.fillStyle = PASTEL.egg;
+    ctx.fill();
+    ctx.strokeStyle = '#d4a574';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Face
+    ctx.fillStyle = '#8B7355';
+    ctx.beginPath(); ctx.arc(-4, -3, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(4, -3, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 3, 3, 0, Math.PI); ctx.stroke();
+  } else if (obj.type === 'vase') {
+    const w = state.zenActive ? 22 : 28;
+    const h = state.zenActive ? 34 : 42;
+    // Vase body
+    ctx.beginPath();
+    ctx.moveTo(-w/2, h/2);
+    ctx.quadraticCurveTo(-w/2 - 4, 0, -w/3, -h/2 + 6);
+    ctx.lineTo(-w/4, -h/2);
+    ctx.lineTo(w/4, -h/2);
+    ctx.lineTo(w/3, -h/2 + 6);
+    ctx.quadraticCurveTo(w/2 + 4, 0, w/2, h/2);
+    ctx.closePath();
+    ctx.fillStyle = PASTEL.vase;
+    ctx.fill();
+    ctx.strokeStyle = '#e57373';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // Rim
+    ctx.beginPath();
+    ctx.ellipse(0, -h/2, w/4, 3, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = '#e57373';
+    ctx.stroke();
+    // Flower
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * 5, -h/2 - 8 + Math.sin(a) * 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath(); ctx.arc(0, -h/2 - 8, 3, 0, Math.PI * 2); ctx.fill();
+  } else {
+    // Piano
+    const w = state.zenActive ? 36 : 44;
+    const h = state.zenActive ? 26 : 32;
+    // Body
+    ctx.fillStyle = '#1a1a2e';
+    ctx.strokeStyle = PASTEL.piano;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-w/2, -h/2, w, h, 4);
+    ctx.fill();
+    ctx.stroke();
+    // Keys
+    const keyW = w / 8;
+    for (let i = 0; i < 8; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#fff' : '#333';
+      ctx.fillRect(-w/2 + i * keyW + 1, -h/2 + h * 0.4, keyW - 2, h * 0.55);
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawFluffZone() {
+  const zone = getFluffZoneRect();
+
+  // Glow
+  ctx.save();
+  ctx.shadowColor = PASTEL.zoneGlow;
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = PASTEL.zone;
+  ctx.globalAlpha = 0.3 + 0.1 * Math.sin(Date.now() * 0.003);
+  ctx.beginPath();
+  ctx.roundRect(zone.x, zone.y, zone.w, zone.h, 10);
+  ctx.fill();
+  ctx.restore();
+
+  // Border
+  ctx.strokeStyle = PASTEL.zone;
+  ctx.lineWidth = 3;
+  ctx.setLineDash([8, 4]);
+  ctx.beginPath();
+  ctx.roundRect(zone.x, zone.y, zone.w, zone.h, 10);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Label
+  ctx.fillStyle = '#fff';
+  ctx.font = '12px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('~ Fluff Zone ~', zone.x + zone.w / 2, zone.y + zone.h / 2 + 4);
+}
+
+function drawLines() {
+  for (const line of state.drawnLines) {
+    ctx.save();
+    ctx.globalAlpha = line.opacity;
+
+    // Glow
+    ctx.shadowColor = PASTEL.lineGlow;
+    ctx.shadowBlur = 12;
+
+    ctx.strokeStyle = PASTEL.line;
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(line.start.x, line.start.y);
+    ctx.lineTo(line.end.x, line.end.y);
+    ctx.stroke();
+
+    // Inner highlight
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#e9e1ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(line.start.x, line.start.y);
+    ctx.lineTo(line.end.x, line.end.y);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // Draw preview
+  if (drawing && lineStart && state.drawPreview) {
+    ctx.save();
+    ctx.globalAlpha = 0.4;
+    ctx.strokeStyle = PASTEL.line;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([10, 8]);
+    ctx.beginPath();
+    ctx.moveTo(lineStart.x, lineStart.y);
+    ctx.lineTo(state.drawPreview.x, state.drawPreview.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+function drawParticles() {
+  for (const p of state.particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawFloatingTexts() {
+  for (const t of state.floatingTexts) {
+    ctx.save();
+    ctx.globalAlpha = t.life;
+    ctx.fillStyle = t.color;
+    ctx.font = 'bold 16px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(t.text, t.x, t.y);
+    ctx.restore();
+  }
+}
+
+function drawBackground() {
+  // Gradient background
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#fdf2f8');
+  grad.addColorStop(0.5, '#fce7f3');
+  grad.addColorStop(1, '#f3e8ff');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Soft clouds
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  const t = Date.now() * 0.0001;
+  for (let i = 0; i < 5; i++) {
+    const cx = ((i * 180 + t * 50 * (i + 1)) % (W + 200)) - 100;
+    const cy = 60 + i * 80;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 30 + i * 5, 0, Math.PI * 2);
+    ctx.arc(cx + 25, cy - 8, 22 + i * 3, 0, Math.PI * 2);
+    ctx.arc(cx + 50, cy, 28 + i * 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Zen overlay
+  if (state.zenActive) {
+    ctx.save();
+    ctx.globalAlpha = 0.08 + 0.04 * Math.sin(Date.now() * 0.005);
+    ctx.fillStyle = '#8ec5fc';
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+
+    // Zen text
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#8ec5fc';
+    ctx.font = 'bold 20px "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    const remaining = Math.ceil(state.zenTimer / 1000);
+    ctx.fillText(`~ Zen Mode ~ ${remaining}s`, W / 2, 90);
+    ctx.restore();
+  }
+}
+
+// --- Main Loop ---
+let lastTime = 0;
+
+function gameLoop(timestamp) {
+  if (!state.running) { requestAnimationFrame(gameLoop); return; }
+
+  const dt = lastTime ? Math.min(timestamp - lastTime, 50) : 16;
+  lastTime = timestamp;
+
+  // Update physics
+  Engine.update(engine, dt);
+
+  // Game updates
+  updateSpawning(dt);
+  updateLines();
+  updateZen(dt);
+  updateParticles(dt);
+  updateFloatingTexts(dt);
+  checkFluffZone();
+
+  // Clean up resolved objects
+  state.fallingObjects = state.fallingObjects.filter(o => !o.caught && !o.shattered);
+
+  // Draw
+  drawBackground();
+  drawFluffZone();
+  drawLines();
+
+  for (const obj of state.fallingObjects) {
+    drawObject(obj);
+  }
+
+  drawParticles();
+  drawFloatingTexts();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Start ---
+startBtn.addEventListener('click', () => {
+  overlay.classList.add('hidden');
+  state.running = true;
+  initEngine();
+  Runner.start(runner, engine);
+  updateHUD();
+  lastTime = 0;
+  state.spawnTimer = 800;
+
+  levelDisplayEl.textContent = 'Level 1';
+  levelDisplayEl.style.opacity = '1';
+  setTimeout(() => { levelDisplayEl.style.opacity = '0'; }, 1500);
+});
+
+updateHUD();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
