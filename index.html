@@ -2,712 +2,668 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Fluff Flight</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     background: #1a1a2e;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
     min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    overflow: hidden;
-    user-select: none;
+    font-family: sans-serif;
+    overflow-y: auto;
   }
-  #gameContainer {
-    position: relative;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 0 60px rgba(255, 182, 193, 0.3);
+  canvas {
+    display: block;
+    cursor: crosshair;
+    touch-action: none;
+    margin-top: 10px;
+    border-radius: 12px;
+    box-shadow: 0 0 40px rgba(255,182,193,0.3);
   }
-  canvas { display: block; cursor: crosshair; touch-action: none; }
-
-  #hud {
-    position: absolute;
+  #ui {
+    position: fixed;
     top: 0; left: 0; right: 0;
-    padding: 12px 16px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    pointer-events: none;
-    z-index: 10;
-  }
-  .hud-box {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(0,0,0,0.35);
-    padding: 6px 12px;
-    border-radius: 16px;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px;
+    background: rgba(0,0,0,0.5);
     color: #fff;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 100;
   }
-  .dot {
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    display: inline-block;
+  #ui span { padding: 4px 10px; border-radius: 10px; background: rgba(255,255,255,0.1); }
+  #startScreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26,26,46,0.92);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    color: #fff;
   }
-  .life-dot { background: radial-gradient(circle at 35% 35%, #fff, #ffb6c1); box-shadow: 0 0 6px rgba(255,182,193,0.5); }
-  .life-dot.empty { opacity: 0.2; }
-  .life-dot.partial { opacity: 0.5; }
-  .crash-dot { background: #444; }
-  .crash-dot.active { background: #ff6b6b; box-shadow: 0 0 8px rgba(255,107,107,0.7); }
-
-  #combo {
-    position: absolute; bottom: 16px; left: 16px;
-    background: rgba(0,0,0,0.35); padding: 6px 14px;
-    border-radius: 16px; color: #fff; font-size: 13px; font-weight: 600;
-    pointer-events: none; z-index: 10;
-  }
-
-  #zenBtn {
-    position: absolute; bottom: 16px; right: 16px;
-    width: 52px; height: 52px; border-radius: 50%;
-    border: 3px solid rgba(255,255,255,0.3);
-    background: radial-gradient(circle at 35% 35%, #e0c3fc, #8ec5fc);
-    cursor: pointer; font-size: 22px;
-    display: flex; align-items: center; justify-content: center;
-    z-index: 10;
-    box-shadow: 0 0 16px rgba(142,197,252,0.3);
-  }
-  #zenBtn:hover { transform: scale(1.08); }
-  #zenBtn.disabled { opacity: 0.3; cursor: not-allowed; }
-
-  #overlay {
-    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(26,26,46,0.9);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    z-index: 30; color: #fff;
-  }
-  #overlay.hidden { display: none; }
-  #overlay h1 {
-    font-size: 48px; margin-bottom: 6px;
+  #startScreen.gone { display: none; }
+  #startScreen h1 {
+    font-size: 44px;
     background: linear-gradient(135deg, #ffb6c1, #e0c3fc, #8ec5fc);
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     background-clip: text;
+    margin-bottom: 10px;
   }
-  #overlay p { font-size: 15px; opacity: 0.6; margin-bottom: 24px; }
-  #overlay .info {
-    text-align: left; font-size: 14px; line-height: 2;
-    opacity: 0.75; max-width: 380px; margin-bottom: 28px;
-  }
-  #playBtn {
+  #startScreen p { opacity: 0.6; margin-bottom: 20px; }
+  #startScreen .info { font-size: 14px; line-height: 2; opacity: 0.75; margin-bottom: 24px; text-align: left; max-width: 380px; }
+  #startScreen button {
     padding: 14px 44px; font-size: 18px; font-weight: 700;
     border: none; border-radius: 30px;
     background: linear-gradient(135deg, #ffb6c1, #e0c3fc);
     color: #1a1a2e; cursor: pointer;
-    box-shadow: 0 4px 20px rgba(255,182,193,0.4);
   }
-  #playBtn:hover { transform: scale(1.05); }
-
-  #levelFlash {
-    position: absolute; top: 45%; left: 50%;
-    transform: translate(-50%, -50%);
-    color: #fff; font-size: 44px; font-weight: 700;
-    text-shadow: 0 0 30px rgba(255,182,193,0.7);
-    z-index: 20; pointer-events: none; opacity: 0;
-    transition: opacity 0.4s;
+  #zenBtn {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: radial-gradient(circle at 35% 35%, #e0c3fc, #8ec5fc);
+    color: #333; font-size: 20px;
+    cursor: pointer; z-index: 100;
   }
+  #zenBtn.off { opacity: 0.3; }
 </style>
 </head>
 <body>
 
-<div id="gameContainer">
-  <canvas id="c"></canvas>
+<div id="ui">
+  <span id="hudLives">Lives: ****</span>
+  <span id="hudLevel">Level 1</span>
+  <span id="hudCrash">Crashes: 0/3</span>
+  <span id="hudCombo">Combo: 0/10</span>
+</div>
 
-  <div id="hud">
-    <div class="hud-box"><span>Lives</span><span id="livesHud"></span></div>
-    <div class="hud-box"><span id="lvlHud">Level 1</span></div>
-    <div class="hud-box"><span>Crashes</span><span id="crashHud"></span></div>
+<canvas id="c"></canvas>
+
+<button id="zenBtn">&#9775;</button>
+
+<div id="startScreen">
+  <h1>Fluff Flight</h1>
+  <p>A Physics-Based Juggling Game</p>
+  <div class="info">
+    Draw lines with your mouse to bounce falling objects.<br>
+    Guide them into the green Fluff Zone at the bottom.<br>
+    You have 4 lives. Every 10 bounces heals you.<br>
+    3 crashes resets to Level 1.<br>
+    Click the Zen button for slow-motion help.
   </div>
-
-  <div id="combo">Combo: <span id="comboNum">0</span> / 10</div>
-  <div id="levelFlash"></div>
-  <button id="zenBtn" title="Zen Mode">&#9775;</button>
-
-  <div id="overlay">
-    <h1>Fluff Flight</h1>
-    <p>A Physics-Based Juggling Game</p>
-    <div class="info">
-      Draw lines with your mouse to bounce falling objects.<br>
-      Guide them into the Fluff Zone at the bottom.<br>
-      You have 4 lives. Every 10 bounces heals +0.25 life.<br>
-      3 crashes resets you to Level 1.<br>
-      Click the Zen button for slow-motion help.
-    </div>
-    <button id="playBtn">Start Playing</button>
-  </div>
+  <button onclick="startGame()">Start Playing</button>
 </div>
 
 <script>
 // =============================================
-// FLUFF FLIGHT - Zero-dependency version
+// FLUFF FLIGHT - Bulletproof version
 // =============================================
 
-const W = 700, H = 850;
-const canvas = document.getElementById('c');
-const ctx = canvas.getContext('2d');
-canvas.width = W; canvas.height = H;
-document.getElementById('gameContainer').style.width = W + 'px';
-document.getElementById('gameContainer').style.height = H + 'px';
-
-// --- Game State ---
-const G = {
-  running: false,
-  lives: 4,
-  lifeFrac: 0,      // 0-3 quarter increments
-  strikes: 0,
-  combo: 0,
-  level: 1,
-  zen: false,
-  zenTimer: 0,
-  zenCooldown: 0,
-  spawnTimer: 0,
-  objects: [],       // falling objects
-  lines: [],         // drawn mattress lines
-  particles: [],
-  texts: [],         // floating text
+// Catch any errors and show them on screen
+var errorLog = [];
+window.onerror = function(msg, url, line) {
+  errorLog.push(msg + ' L' + line);
+  return false;
 };
 
-const GRAVITY = 0.35;
-const BOUNCE_DAMP = 0.72;
-const LINE_LIFE = 2500;    // ms
-const ZEN_DUR = 5000;
-const ZEN_CD = 20000;
-const TYPES = ['egg', 'vase', 'piano'];
-const COLORS = { egg: '#fef3c7', vase: '#fda4af', piano: '#93c5fd' };
-const SPARKLE = ['#ffb6c1','#e0c3fc','#8ec5fc','#a7f3d0','#fde68a','#fda4af'];
+var CW = Math.min(700, window.innerWidth - 20);
+var CH = Math.min(800, window.innerHeight - 60);
+var canvas = document.getElementById('c');
+canvas.width = CW;
+canvas.height = CH;
+var ctx = canvas.getContext('2d');
 
-// --- Drawing helper ---
-function roundRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+// Game state
+var running = false;
+var lives = 4;
+var lifeFrac = 0;
+var strikes = 0;
+var combo = 0;
+var level = 1;
+var zenOn = false;
+var zenTimer = 0;
+var zenCooldown = 0;
+var spawnTimer = 0;
+var objects = [];
+var lines = [];
+var particles = [];
+var texts = [];
+var frameCount = 0;
+
+var GRAVITY = 0.3;
+var BOUNCE = 0.7;
+var LINE_LIFE = 2500;
+
+// Drawing state
+var dragging = false;
+var dragX1 = 0, dragY1 = 0, dragX2 = 0, dragY2 = 0;
+
+function getXY(e) {
+  var r = canvas.getBoundingClientRect();
+  if (e.touches) {
+    var t = e.touches[0] || e.changedTouches[0];
+    return [t.clientX - r.left, t.clientY - r.top];
+  }
+  return [e.clientX - r.left, e.clientY - r.top];
 }
 
-// --- Fluff Zone ---
-function zoneRect() {
-  let w = Math.max(80, 300 - (G.level - 1) * 20);
-  if (G.zen) w += 80;
-  return { x: (W - w) / 2, y: H - 50, w, h: 40 };
+canvas.onmousedown = function(e) {
+  if (!running) return;
+  var p = getXY(e);
+  dragX1 = p[0]; dragY1 = p[1];
+  dragging = true;
+};
+canvas.onmousemove = function(e) {
+  if (!dragging) return;
+  var p = getXY(e);
+  dragX2 = p[0]; dragY2 = p[1];
+};
+canvas.onmouseup = function(e) {
+  if (!dragging) return;
+  var p = getXY(e);
+  addLine(dragX1, dragY1, p[0], p[1]);
+  dragging = false;
+};
+
+canvas.ontouchstart = function(e) {
+  e.preventDefault();
+  if (!running) return;
+  var p = getXY(e);
+  dragX1 = p[0]; dragY1 = p[1];
+  dragging = true;
+};
+canvas.ontouchmove = function(e) {
+  e.preventDefault();
+  if (!dragging) return;
+  var p = getXY(e);
+  dragX2 = p[0]; dragY2 = p[1];
+};
+canvas.ontouchend = function(e) {
+  e.preventDefault();
+  if (!dragging) return;
+  var p = getXY(e);
+  addLine(dragX1, dragY1, p[0], p[1]);
+  dragging = false;
+};
+
+function addLine(x1, y1, x2, y2) {
+  var dx = x2 - x1, dy = y2 - y1;
+  var len = Math.sqrt(dx * dx + dy * dy);
+  if (len > 25) {
+    lines.push({ x1: x1, y1: y1, x2: x2, y2: y2, born: Date.now() });
+  }
 }
 
-// --- Spawn Objects ---
-function spawn() {
-  const type = TYPES[Math.floor(Math.random() * 3)];
-  const sizes = { egg: { w: 30, h: 36 }, vase: { w: 28, h: 42 }, piano: { w: 44, h: 32 } };
-  const s = sizes[type];
-  G.objects.push({
-    type,
-    x: 50 + Math.random() * (W - 100),
-    y: -50,
-    vx: (Math.random() - 0.5) * 1.5,
-    vy: 0,
-    w: s.w, h: s.h,
-    angle: 0,
-    va: (Math.random() - 0.5) * 0.03,
-    alive: true,
+// Fluff zone
+function getZone() {
+  var w = Math.max(80, 280 - (level - 1) * 20);
+  if (zenOn) w += 80;
+  var h = 36;
+  return { x: (CW - w) / 2, y: CH - h - 8, w: w, h: h };
+}
+
+// Spawn
+function spawnObj() {
+  var types = ['egg', 'vase', 'piano'];
+  var type = types[Math.floor(Math.random() * 3)];
+  objects.push({
+    type: type,
+    x: 40 + Math.random() * (CW - 80),
+    y: -40,
+    vx: (Math.random() - 0.5) * 1.2,
+    vy: 0.5,
+    alive: true
   });
 }
 
-// --- Line Drawing ---
-let drawing = false, dragStart = null, dragEnd = null;
+// Line bounce check
+function checkBounce(obj) {
+  var now = Date.now();
+  for (var i = 0; i < lines.length; i++) {
+    var L = lines[i];
+    if (now - L.born > LINE_LIFE) continue;
 
-function getPos(e) {
-  const r = canvas.getBoundingClientRect();
-  const t = e.touches ? e.touches[0] || e.changedTouches[0] : e;
-  return { x: t.clientX - r.left, y: t.clientY - r.top };
-}
+    var lx = L.x2 - L.x1;
+    var ly = L.y2 - L.y1;
+    var len = Math.sqrt(lx * lx + ly * ly);
+    if (len < 5) continue;
 
-canvas.addEventListener('mousedown', e => { if (!G.running) return; dragStart = getPos(e); drawing = true; });
-canvas.addEventListener('mousemove', e => { if (drawing) dragEnd = getPos(e); });
-canvas.addEventListener('mouseup', e => { finishLine(getPos(e)); });
-canvas.addEventListener('touchstart', e => { e.preventDefault(); if (!G.running) return; dragStart = getPos(e); drawing = true; });
-canvas.addEventListener('touchmove', e => { e.preventDefault(); if (drawing) dragEnd = getPos(e); });
-canvas.addEventListener('touchend', e => { e.preventDefault(); finishLine(getPos(e)); });
+    // Line normal (ensure it points up)
+    var nx = -ly / len;
+    var ny = lx / len;
+    if (ny > 0) { nx = -nx; ny = -ny; }
 
-function finishLine(end) {
-  if (!drawing || !dragStart) { drawing = false; return; }
-  const dx = end.x - dragStart.x, dy = end.y - dragStart.y;
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len > 25) {
-    G.lines.push({
-      x1: dragStart.x, y1: dragStart.y,
-      x2: end.x, y2: end.y,
-      born: performance.now(),
-    });
-  }
-  drawing = false; dragStart = null; dragEnd = null;
-}
+    // Distance from object to line
+    var dx = obj.x - L.x1;
+    var dy = obj.y - L.y1;
+    var dist = dx * nx + dy * ny;
 
-// --- Collision: object vs line segment ---
-function lineCollide(obj, line) {
-  const lx = line.x2 - line.x1, ly = line.y2 - line.y1;
-  const len = Math.sqrt(lx * lx + ly * ly);
-  if (len < 1) return false;
+    // Projection along line
+    var proj = (dx * lx + dy * ly) / (len * len);
+    if (proj < -0.1 || proj > 1.1) continue;
 
-  // Normal of the line (pointing "up" relative to line direction)
-  let nx = -ly / len, ny = lx / len;
-  // Make sure normal points upward-ish (away from floor)
-  if (ny > 0) { nx = -nx; ny = -ny; }
-
-  // Distance from object center to the infinite line
-  const dx = obj.x - line.x1, dy = obj.y - line.y1;
-  const dist = dx * nx + dy * ny;
-
-  // Project onto line segment to check if we're within bounds
-  const proj = (dx * lx + dy * ly) / (len * len);
-  if (proj < -0.05 || proj > 1.05) return false;
-
-  const radius = Math.min(obj.w, obj.h) / 2;
-
-  // Check if close enough and moving toward the line
-  if (dist > 0 && dist < radius + 6) {
-    const vDotN = obj.vx * nx + obj.vy * ny;
-    if (vDotN < 0) {
-      // Reflect velocity across line normal
-      obj.vx -= 2 * vDotN * nx * BOUNCE_DAMP;
-      obj.vy -= 2 * vDotN * ny * BOUNCE_DAMP;
-
-      // Push object out of line
-      obj.x += nx * (radius + 6 - dist);
-      obj.y += ny * (radius + 6 - dist);
-
-      // Spin on bounce
-      obj.va = (Math.random() - 0.5) * 0.08;
-
-      return true;
+    // Close enough and moving toward line?
+    if (dist > 0 && dist < 22) {
+      var vn = obj.vx * nx + obj.vy * ny;
+      if (vn < 0) {
+        // Reflect
+        obj.vx = obj.vx - 2 * vn * nx;
+        obj.vy = obj.vy - 2 * vn * ny;
+        obj.vx *= BOUNCE;
+        obj.vy *= BOUNCE;
+        // Push out
+        obj.x += nx * (22 - dist);
+        obj.y += ny * (22 - dist);
+        return true;
+      }
     }
   }
   return false;
 }
 
-// --- Particles ---
-function burstParticles(x, y, color, count) {
-  for (let i = 0; i < count; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const sp = 1.5 + Math.random() * 4;
-    G.particles.push({
-      x, y,
-      vx: Math.cos(a) * sp,
-      vy: Math.sin(a) * sp - 2,
-      life: 1,
-      color: color || SPARKLE[Math.floor(Math.random() * SPARKLE.length)],
-      size: 2 + Math.random() * 4,
+// Particle burst
+function burst(x, y, color, n) {
+  for (var i = 0; i < n; i++) {
+    var a = Math.random() * Math.PI * 2;
+    var s = 1 + Math.random() * 4;
+    particles.push({
+      x: x, y: y,
+      vx: Math.cos(a) * s,
+      vy: Math.sin(a) * s - 2,
+      life: 1.0,
+      color: color,
+      size: 2 + Math.random() * 4
     });
   }
 }
 
-function floatText(text, x, y, color) {
-  G.texts.push({ text, x, y, life: 1, color });
+function floatText(msg, x, y, color) {
+  texts.push({ t: msg, x: x, y: y, life: 1.0, color: color });
 }
 
-// --- HUD ---
 function updateHUD() {
-  let lh = '';
-  for (let i = 0; i < 4; i++) {
-    if (i < G.lives) lh += '<span class="dot life-dot"></span>';
-    else if (i === G.lives && G.lifeFrac > 0) lh += '<span class="dot life-dot partial"></span>';
-    else lh += '<span class="dot life-dot empty"></span>';
-  }
-  document.getElementById('livesHud').innerHTML = lh;
-
-  let ch = '';
-  for (let i = 0; i < 3; i++) ch += '<span class="dot crash-dot' + (i < G.strikes ? ' active' : '') + '"></span>';
-  document.getElementById('crashHud').innerHTML = ch;
-
-  document.getElementById('lvlHud').textContent = 'Level ' + G.level;
-  document.getElementById('comboNum').textContent = G.combo;
+  var lifeStr = '';
+  for (var i = 0; i < 4; i++) lifeStr += (i < lives) ? '*' : '.';
+  document.getElementById('hudLives').textContent = 'Lives: ' + lifeStr;
+  document.getElementById('hudLevel').textContent = 'Level ' + level;
+  document.getElementById('hudCrash').textContent = 'Crashes: ' + strikes + '/3';
+  document.getElementById('hudCombo').textContent = 'Combo: ' + combo + '/10';
 }
 
-// --- Zen Mode ---
-document.getElementById('zenBtn').addEventListener('click', () => {
-  if (!G.running || G.zen || G.zenCooldown > 0) return;
-  G.zen = true;
-  G.zenTimer = ZEN_DUR;
-  document.getElementById('zenBtn').classList.add('disabled');
-});
+// Zen
+document.getElementById('zenBtn').onclick = function() {
+  if (!running || zenOn || zenCooldown > 0) return;
+  zenOn = true;
+  zenTimer = 5000;
+  this.classList.add('off');
+};
 
-// --- Game Logic ---
+// Game events
 function onBounce(obj) {
-  G.combo++;
-  document.getElementById('comboNum').textContent = G.combo;
-  floatText('+1', obj.x, obj.y - 30, '#c4b5fd');
-
-  if (G.combo >= 10) {
-    G.combo = 0;
-    document.getElementById('comboNum').textContent = '0';
-    if (G.lives < 4) {
-      G.lifeFrac++;
-      if (G.lifeFrac >= 4) { G.lifeFrac = 0; G.lives = Math.min(4, G.lives + 1); }
-      floatText('+0.25 Life!', W / 2, H / 2 - 40, '#a7f3d0');
-      updateHUD();
+  combo++;
+  floatText('+1', obj.x, obj.y - 25, '#c4b5fd');
+  if (combo >= 10) {
+    combo = 0;
+    if (lives < 4) {
+      lifeFrac++;
+      if (lifeFrac >= 4) { lifeFrac = 0; lives = Math.min(4, lives + 1); }
+      floatText('+0.25 Life!', CW / 2, CH / 2, '#66bb6a');
     }
   }
+  updateHUD();
 }
 
 function onCrash(obj) {
-  burstParticles(obj.x, obj.y, COLORS[obj.type], 20);
-  floatText('CRASH!', obj.x, obj.y - 30, '#ff6b6b');
+  burst(obj.x, obj.y, '#ff6b6b', 18);
+  floatText('CRASH!', obj.x, obj.y - 25, '#ff6b6b');
   obj.alive = false;
-  G.strikes++;
-  G.combo = 0;
-  document.getElementById('comboNum').textContent = '0';
+  strikes++;
+  combo = 0;
   updateHUD();
-
-  if (G.strikes >= 3) {
-    setTimeout(resetGame, 800);
+  if (strikes >= 3) {
+    setTimeout(function() {
+      lives = 4; lifeFrac = 0; strikes = 0; combo = 0; level = 1;
+      objects = []; lines = []; particles = []; texts = [];
+      spawnTimer = 800; zenOn = false; zenTimer = 0; zenCooldown = 0;
+      document.getElementById('zenBtn').classList.remove('off');
+      updateHUD();
+    }, 800);
   }
 }
 
 function onCatch(obj) {
-  burstParticles(obj.x, obj.y, null, 20);
-  floatText('Caught!', obj.x, obj.y - 20, '#a7f3d0');
+  burst(obj.x, obj.y, '#66bb6a', 15);
+  floatText('Caught!', obj.x, obj.y - 25, '#66bb6a');
   obj.alive = false;
 }
 
-function nextLevel() {
-  G.level++;
-  G.objects = [];
-  G.spawnTimer = 1200;
-  updateHUD();
-  showLevelFlash('Level ' + G.level);
-}
+// MAIN LOOP
+var lastTime = 0;
 
-function resetGame() {
-  G.lives = 4; G.lifeFrac = 0; G.strikes = 0; G.combo = 0;
-  G.level = 1; G.zen = false; G.zenTimer = 0; G.zenCooldown = 0;
-  G.objects = []; G.lines = []; G.particles = []; G.texts = [];
-  G.spawnTimer = 1000;
-  document.getElementById('zenBtn').classList.remove('disabled');
-  updateHUD();
-  showLevelFlash('Level 1');
-}
+function loop(now) {
+  try {
+    requestAnimationFrame(loop);
+    if (!running) return;
 
-function showLevelFlash(txt) {
-  const el = document.getElementById('levelFlash');
-  el.textContent = txt;
-  el.style.opacity = '1';
-  setTimeout(() => { el.style.opacity = '0'; }, 1400);
-}
-
-// --- Main Update ---
-let lastT = 0;
-
-function update(now) {
-  requestAnimationFrame(update);
-  if (!G.running) return;
-
-  const dt = lastT ? Math.min(now - lastT, 40) : 16;
-  lastT = now;
-  const grav = G.zen ? GRAVITY * 0.5 : GRAVITY;
-
-  // Spawn
-  G.spawnTimer -= dt;
-  if (G.spawnTimer <= 0) {
-    const active = G.objects.filter(o => o.alive).length;
-    const maxA = Math.min(2 + Math.floor(G.level / 2), 5);
-    if (active < maxA) spawn();
-    G.spawnTimer = Math.max(1200, 2500 - G.level * 150);
-  }
-
-  // Zen timer
-  if (G.zen) {
-    G.zenTimer -= dt;
-    if (G.zenTimer <= 0) {
-      G.zen = false;
-      G.zenCooldown = ZEN_CD;
-    }
-  }
-  if (G.zenCooldown > 0) {
-    G.zenCooldown -= dt;
-    if (G.zenCooldown <= 0) {
-      G.zenCooldown = 0;
-      document.getElementById('zenBtn').classList.remove('disabled');
-    }
-  }
-
-  // Expire lines
-  G.lines = G.lines.filter(l => now - l.born < LINE_LIFE);
-
-  // Update objects
-  const zone = zoneRect();
-  for (const obj of G.objects) {
-    if (!obj.alive) continue;
-
-    obj.vy += grav;
-    obj.x += obj.vx;
-    obj.y += obj.vy;
-    obj.angle += obj.va;
-
-    // Wall bounce
-    if (obj.x < 20) { obj.x = 20; obj.vx = Math.abs(obj.vx) * 0.7; }
-    if (obj.x > W - 20) { obj.x = W - 20; obj.vx = -Math.abs(obj.vx) * 0.7; }
-
-    // Line collisions
-    for (const line of G.lines) {
-      if (lineCollide(obj, line)) {
-        onBounce(obj);
-        break;
-      }
-    }
-
-    // Floor crash
-    if (obj.y > H - 10) {
-      onCrash(obj);
-      continue;
-    }
-
-    // Fluff zone catch
-    if (obj.y + obj.h / 2 >= zone.y &&
-        obj.x >= zone.x && obj.x <= zone.x + zone.w &&
-        obj.vy > 0) {
-      onCatch(obj);
-    }
-  }
-
-  // Remove dead objects
-  G.objects = G.objects.filter(o => o.alive);
-
-  // Auto-level: if no objects and spawn timer is high, check for level-up
-  // (level up when an object is caught and none remain)
-  // This is handled by onCatch -> check remaining
-
-  // Particles
-  for (let i = G.particles.length - 1; i >= 0; i--) {
-    const p = G.particles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.08;
-    p.life -= dt * 0.0012;
-    if (p.life <= 0) G.particles.splice(i, 1);
-  }
-
-  // Floating texts
-  for (let i = G.texts.length - 1; i >= 0; i--) {
-    const t = G.texts[i];
-    t.y -= 0.8;
-    t.life -= dt * 0.0012;
-    if (t.life <= 0) G.texts.splice(i, 1);
-  }
-
-  // --- DRAW ---
-  draw(now);
-}
-
-function draw(now) {
-  // Background
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#fdf2f8');
-  grad.addColorStop(0.5, '#fce7f3');
-  grad.addColorStop(1, '#f3e8ff');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-
-  // Clouds
-  ctx.save();
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = '#fff';
-  const ct = now * 0.00008;
-  for (let i = 0; i < 5; i++) {
-    const cx = ((i * 170 + ct * 40 * (i + 1)) % (W + 200)) - 100;
-    const cy = 60 + i * 75;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 28 + i * 4, 0, Math.PI * 2);
-    ctx.arc(cx + 24, cy - 7, 20 + i * 3, 0, Math.PI * 2);
-    ctx.arc(cx + 48, cy, 26 + i * 3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-
-  // Zen tint
-  if (G.zen) {
-    ctx.save();
-    ctx.globalAlpha = 0.07;
-    ctx.fillStyle = '#8ec5fc';
-    ctx.fillRect(0, 0, W, H);
-    ctx.restore();
-
-    ctx.save();
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = '#8ec5fc';
-    ctx.font = 'bold 18px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('~ Zen Mode ~ ' + Math.ceil(G.zenTimer / 1000) + 's', W / 2, 88);
-    ctx.restore();
-  }
-
-  // Fluff zone
-  const zone = zoneRect();
-  ctx.save();
-  ctx.globalAlpha = 0.25 + 0.08 * Math.sin(now * 0.003);
-  ctx.fillStyle = '#a7f3d0';
-  ctx.shadowColor = 'rgba(167,243,208,0.4)';
-  ctx.shadowBlur = 16;
-  roundRect(zone.x, zone.y, zone.w, zone.h, 10);
-  ctx.fill();
-  ctx.restore();
-
-  ctx.strokeStyle = '#a7f3d0';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([8, 5]);
-  roundRect(zone.x, zone.y, zone.w, zone.h, 10);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.font = '12px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('~ Fluff Zone ~', zone.x + zone.w / 2, zone.y + zone.h / 2 + 4);
-
-  // Lines (mattresses)
-  for (const line of G.lines) {
-    const age = now - line.born;
-    const alpha = Math.max(0, 1 - age / LINE_LIFE);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = '#c4b5fd';
-    ctx.lineWidth = 10;
-    ctx.lineCap = 'round';
-    ctx.shadowColor = 'rgba(196,181,253,0.5)';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.moveTo(line.x1, line.y1);
-    ctx.lineTo(line.x2, line.y2);
-    ctx.stroke();
-    // Inner glow
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = '#ede9fe';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(line.x1, line.y1);
-    ctx.lineTo(line.x2, line.y2);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Drawing preview
-  if (drawing && dragStart && dragEnd) {
-    ctx.save();
-    ctx.globalAlpha = 0.4;
-    ctx.strokeStyle = '#c4b5fd';
-    ctx.lineWidth = 6;
-    ctx.lineCap = 'round';
-    ctx.setLineDash([10, 8]);
-    ctx.beginPath();
-    ctx.moveTo(dragStart.x, dragStart.y);
-    ctx.lineTo(dragEnd.x, dragEnd.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-  }
-
-  // Objects
-  for (const obj of G.objects) {
-    if (!obj.alive) continue;
-    ctx.save();
-    ctx.translate(obj.x, obj.y);
-    ctx.rotate(obj.angle);
-
-    if (obj.type === 'egg') {
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 13, 17, 0, 0, Math.PI * 2);
-      ctx.fillStyle = '#fef3c7';
-      ctx.fill();
-      ctx.strokeStyle = '#d4a574';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // Face
-      ctx.fillStyle = '#8B7355';
-      ctx.beginPath(); ctx.arc(-4, -4, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(4, -4, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(0, 2, 3, 0.1, Math.PI - 0.1); ctx.strokeStyle = '#8B7355'; ctx.lineWidth = 1.5; ctx.stroke();
-    } else if (obj.type === 'vase') {
-      ctx.beginPath();
-      ctx.moveTo(-12, 20);
-      ctx.quadraticCurveTo(-16, 0, -9, -14);
-      ctx.lineTo(-6, -18);
-      ctx.lineTo(6, -18);
-      ctx.lineTo(9, -14);
-      ctx.quadraticCurveTo(16, 0, 12, 20);
-      ctx.closePath();
-      ctx.fillStyle = '#fda4af';
-      ctx.fill();
-      ctx.strokeStyle = '#e57373';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      // Rim
-      ctx.beginPath();
-      ctx.ellipse(0, -18, 6, 3, 0, 0, Math.PI * 2);
-      ctx.strokeStyle = '#e57373'; ctx.lineWidth = 1.5; ctx.stroke();
-      // Flower
-      ctx.fillStyle = '#fff';
-      for (let i = 0; i < 5; i++) {
-        const a = (i / 5) * Math.PI * 2;
-        ctx.beginPath();
-        ctx.arc(Math.cos(a) * 5, -26 + Math.sin(a) * 5, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = '#fde68a';
-      ctx.beginPath(); ctx.arc(0, -26, 3, 0, Math.PI * 2); ctx.fill();
+    frameCount++;
+    var dt = 0;
+    if (lastTime > 0) {
+      dt = now - lastTime;
+      if (dt > 50) dt = 16;
     } else {
-      // Piano
-      const pw = 22, ph = 16;
-      ctx.fillStyle = '#1a1a2e';
-      ctx.strokeStyle = '#93c5fd';
-      ctx.lineWidth = 2;
-      roundRect(-pw, -ph, pw * 2, ph * 2, 4);
-      ctx.fill();
-      ctx.stroke();
-      // Keys
-      const kw = (pw * 2) / 8;
-      for (let i = 0; i < 8; i++) {
-        ctx.fillStyle = i % 2 === 0 ? '#fff' : '#333';
-        ctx.fillRect(-pw + i * kw + 1, -ph + ph * 0.7, kw - 2, ph * 1.2);
+      dt = 16;
+    }
+    lastTime = now;
+
+    var grav = zenOn ? GRAVITY * 0.5 : GRAVITY;
+
+    // Zen
+    if (zenOn) {
+      zenTimer -= dt;
+      if (zenTimer <= 0) { zenOn = false; zenCooldown = 20000; }
+    }
+    if (zenCooldown > 0) {
+      zenCooldown -= dt;
+      if (zenCooldown <= 0) {
+        zenCooldown = 0;
+        document.getElementById('zenBtn').classList.remove('off');
       }
     }
-    ctx.restore();
-  }
 
-  // Particles
-  for (const p of G.particles) {
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, p.life);
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size * Math.max(0, p.life), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
+    // Spawn
+    spawnTimer -= dt;
+    if (spawnTimer <= 0) {
+      var activeCount = 0;
+      for (var i = 0; i < objects.length; i++) { if (objects[i].alive) activeCount++; }
+      var maxObj = Math.min(2 + Math.floor(level / 2), 5);
+      if (activeCount < maxObj) spawnObj();
+      spawnTimer = Math.max(1000, 2400 - level * 150);
+    }
 
-  // Floating texts
-  for (const t of G.texts) {
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, t.life);
-    ctx.fillStyle = t.color;
-    ctx.font = 'bold 16px sans-serif';
+    // Expire old lines
+    var now2 = Date.now();
+    var newLines = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (now2 - lines[i].born < LINE_LIFE) newLines.push(lines[i]);
+    }
+    lines = newLines;
+
+    // Update objects
+    var zone = getZone();
+    for (var i = 0; i < objects.length; i++) {
+      var obj = objects[i];
+      if (!obj.alive) continue;
+
+      obj.vy += grav;
+      obj.x += obj.vx;
+      obj.y += obj.vy;
+
+      // Walls
+      if (obj.x < 15) { obj.x = 15; obj.vx = Math.abs(obj.vx) * 0.6; }
+      if (obj.x > CW - 15) { obj.x = CW - 15; obj.vx = -Math.abs(obj.vx) * 0.6; }
+
+      // Line bounce
+      if (checkBounce(obj)) {
+        onBounce(obj);
+      }
+
+      // Floor crash
+      if (obj.y > CH - 5) {
+        onCrash(obj);
+        continue;
+      }
+
+      // Fluff zone catch
+      if (obj.vy > 0 && obj.y > zone.y && obj.y < zone.y + zone.h &&
+          obj.x > zone.x && obj.x < zone.x + zone.w) {
+        onCatch(obj);
+      }
+    }
+
+    // Clean dead objects
+    var alive = [];
+    for (var i = 0; i < objects.length; i++) {
+      if (objects[i].alive) alive.push(objects[i]);
+    }
+    objects = alive;
+
+    // Update particles
+    for (var i = particles.length - 1; i >= 0; i--) {
+      var p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.08;
+      p.life -= 0.02;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Update floating texts
+    for (var i = texts.length - 1; i >= 0; i--) {
+      texts[i].y -= 0.8;
+      texts[i].life -= 0.015;
+      if (texts[i].life <= 0) texts.splice(i, 1);
+    }
+
+    // ======= DRAW =======
+    // Background gradient
+    var grad = ctx.createLinearGradient(0, 0, 0, CH);
+    grad.addColorStop(0, '#fdf2f8');
+    grad.addColorStop(0.5, '#fce7f3');
+    grad.addColorStop(1, '#f3e8ff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CW, CH);
+
+    // Clouds
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#ffffff';
+    var ct = now * 0.00006;
+    for (var i = 0; i < 4; i++) {
+      var cx = ((i * 190 + ct * 30 * (i + 1)) % (CW + 200)) - 100;
+      var cy = 60 + i * 70;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 25, 0, Math.PI * 2);
+      ctx.arc(cx + 22, cy - 6, 18, 0, Math.PI * 2);
+      ctx.arc(cx + 44, cy, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+
+    // Zen overlay
+    if (zenOn) {
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = '#8ec5fc';
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = '#8ec5fc';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Zen Mode ' + Math.ceil(zenTimer / 1000) + 's', CW / 2, 80);
+    }
+
+    // FLUFF ZONE - simple bright rectangle
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 5]);
+    ctx.strokeRect(zone.x, zone.y, zone.w, zone.h);
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '13px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(t.text, t.x, t.y);
-    ctx.restore();
+    ctx.fillText('~ Fluff Zone ~', zone.x + zone.w / 2, zone.y + zone.h / 2 + 4);
+
+    // MATTRESS LINES
+    for (var i = 0; i < lines.length; i++) {
+      var L = lines[i];
+      var age = now2 - L.born;
+      var alpha = Math.max(0, 1 - age / LINE_LIFE);
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#a78bfa';
+      ctx.lineWidth = 10;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(L.x1, L.y1);
+      ctx.lineTo(L.x2, L.y2);
+      ctx.stroke();
+      ctx.strokeStyle = '#e9e1ff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(L.x1, L.y1);
+      ctx.lineTo(L.x2, L.y2);
+      ctx.stroke();
+      ctx.globalAlpha = 1.0;
+    }
+
+    // DRAWING PREVIEW
+    if (dragging) {
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = '#a78bfa';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.moveTo(dragX1, dragY1);
+      ctx.lineTo(dragX2, dragY2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1.0;
+    }
+
+    // OBJECTS
+    for (var i = 0; i < objects.length; i++) {
+      var obj = objects[i];
+      if (!obj.alive) continue;
+
+      ctx.save();
+      ctx.translate(obj.x, obj.y);
+
+      if (obj.type === 'egg') {
+        // Egg
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 13, 17, 0, 0, Math.PI * 2);
+        ctx.fillStyle = '#fef3c7';
+        ctx.fill();
+        ctx.strokeStyle = '#d4a574';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Eyes
+        ctx.fillStyle = '#7c6545';
+        ctx.beginPath(); ctx.arc(-4, -4, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(4, -4, 2, 0, Math.PI * 2); ctx.fill();
+        // Smile
+        ctx.beginPath(); ctx.arc(0, 1, 4, 0.2, Math.PI - 0.2); ctx.strokeStyle = '#7c6545'; ctx.lineWidth = 1.5; ctx.stroke();
+      } else if (obj.type === 'vase') {
+        // Vase body
+        ctx.beginPath();
+        ctx.moveTo(-11, 18);
+        ctx.quadraticCurveTo(-15, 0, -8, -13);
+        ctx.lineTo(-5, -17);
+        ctx.lineTo(5, -17);
+        ctx.lineTo(8, -13);
+        ctx.quadraticCurveTo(15, 0, 11, 18);
+        ctx.closePath();
+        ctx.fillStyle = '#fda4af';
+        ctx.fill();
+        ctx.strokeStyle = '#e57373';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Flower
+        ctx.fillStyle = '#ffffff';
+        for (var j = 0; j < 5; j++) {
+          var fa = (j / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(Math.cos(fa) * 5, -24 + Math.sin(fa) * 5, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#fde68a';
+        ctx.beginPath(); ctx.arc(0, -24, 3, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // Piano
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(-20, -14, 40, 28);
+        ctx.strokeStyle = '#93c5fd';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-20, -14, 40, 28);
+        // Keys
+        for (var j = 0; j < 7; j++) {
+          ctx.fillStyle = (j % 2 === 0) ? '#ffffff' : '#334155';
+          ctx.fillRect(-18 + j * 5.2, -4, 4.5, 16);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // PARTICLES
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      ctx.globalAlpha = Math.max(0, p.life);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.life), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1.0;
+
+    // FLOATING TEXTS
+    for (var i = 0; i < texts.length; i++) {
+      var t = texts[i];
+      ctx.globalAlpha = Math.max(0, t.life);
+      ctx.fillStyle = t.color;
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(t.t, t.x, t.y);
+    }
+    ctx.globalAlpha = 1.0;
+
+    // DEBUG - frame counter + object count
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(0, CH - 22, 200, 22);
+    ctx.fillStyle = '#fff';
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('frame:' + frameCount + ' obj:' + objects.length + ' lines:' + lines.length, 4, CH - 7);
+
+    // Show any errors
+    if (errorLog.length > 0) {
+      ctx.fillStyle = 'rgba(255,0,0,0.8)';
+      ctx.fillRect(0, 40, CW, 20 * errorLog.length);
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px monospace';
+      for (var i = 0; i < errorLog.length; i++) {
+        ctx.fillText(errorLog[i], 10, 55 + i * 20);
+      }
+    }
+
+  } catch(err) {
+    errorLog.push(err.message);
   }
 }
 
-// --- Start ---
-document.getElementById('playBtn').addEventListener('click', () => {
-  document.getElementById('overlay').classList.add('hidden');
-  G.running = true;
-  G.spawnTimer = 600;
-  lastT = 0;
+function startGame() {
+  document.getElementById('startScreen').classList.add('gone');
+  running = true;
+  spawnTimer = 100; // spawn almost immediately
+  lastTime = 0;
   updateHUD();
-  showLevelFlash('Level 1');
-});
+}
 
 updateHUD();
-requestAnimationFrame(update);
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
