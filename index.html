@@ -97,7 +97,7 @@
   <p>A Physics-Based Juggling Game</p>
   <div class="info">
     Draw lines with your mouse to bounce falling objects.<br>
-    Guide them into the green Fluff Zone at the bottom.<br>
+    Guide them into the Fluff Zone on the right wall.<br>
     You have 4 lives. Every 10 bounces heals you.<br>
     3 crashes resets to Level 1.<br>
     Click the Zen button for slow-motion help.
@@ -141,9 +141,9 @@ var particles = [];
 var texts = [];
 var frameCount = 0;
 
-var GRAVITY = 0.3;
-var BOUNCE = 0.7;
-var LINE_LIFE = 2500;
+var GRAVITY = 0.12;
+var BOUNCE = 0.75;
+var LINE_LIFE = 3000;
 
 // Drawing state
 var dragging = false;
@@ -205,12 +205,14 @@ function addLine(x1, y1, x2, y2) {
   }
 }
 
-// Fluff zone
+// Fluff zone - on the right wall
 function getZone() {
-  var w = Math.max(80, 280 - (level - 1) * 20);
-  if (zenOn) w += 80;
-  var h = 36;
-  return { x: (CW - w) / 2, y: CH - h - 8, w: w, h: h };
+  var h = Math.max(60, 220 - (level - 1) * 18);
+  if (zenOn) h += 60;
+  var w = 40;
+  var x = CW - w;
+  var y = CH / 2 - h / 2;
+  return { x: x, y: y, w: w, h: h };
 }
 
 // Spawn
@@ -219,10 +221,10 @@ function spawnObj() {
   var type = types[Math.floor(Math.random() * 3)];
   objects.push({
     type: type,
-    x: 40 + Math.random() * (CW - 80),
+    x: 40 + Math.random() * (CW - 120),
     y: -40,
-    vx: (Math.random() - 0.5) * 1.2,
-    vy: 0.5,
+    vx: (Math.random() - 0.5) * 0.8,
+    vy: 0.2,
     alive: true
   });
 }
@@ -388,7 +390,7 @@ function loop(now) {
       for (var i = 0; i < objects.length; i++) { if (objects[i].alive) activeCount++; }
       var maxObj = Math.min(2 + Math.floor(level / 2), 5);
       if (activeCount < maxObj) spawnObj();
-      spawnTimer = Math.max(1000, 2400 - level * 150);
+      spawnTimer = Math.max(1200, 3200 - level * 200);
     }
 
     // Expire old lines
@@ -406,11 +408,14 @@ function loop(now) {
       if (!obj.alive) continue;
 
       obj.vy += grav;
+      obj.vx *= 0.998;  // air friction
+      obj.vy *= 0.998;
       obj.x += obj.vx;
       obj.y += obj.vy;
 
-      // Walls
+      // Left wall
       if (obj.x < 15) { obj.x = 15; obj.vx = Math.abs(obj.vx) * 0.6; }
+      // Right wall (but allow entry into fluff zone area)
       if (obj.x > CW - 15) { obj.x = CW - 15; obj.vx = -Math.abs(obj.vx) * 0.6; }
 
       // Line bounce
@@ -424,9 +429,8 @@ function loop(now) {
         continue;
       }
 
-      // Fluff zone catch
-      if (obj.vy > 0 && obj.y > zone.y && obj.y < zone.y + zone.h &&
-          obj.x > zone.x && obj.x < zone.x + zone.w) {
+      // Fluff zone catch (right wall)
+      if (obj.x > zone.x && obj.y > zone.y && obj.y < zone.y + zone.h) {
         onCatch(obj);
       }
     }
@@ -491,8 +495,8 @@ function loop(now) {
       ctx.fillText('Zen Mode ' + Math.ceil(zenTimer / 1000) + 's', CW / 2, 80);
     }
 
-    // FLUFF ZONE - simple bright rectangle
-    ctx.globalAlpha = 0.4;
+    // FLUFF ZONE - on the right wall
+    ctx.globalAlpha = 0.35 + 0.08 * Math.sin(now * 0.003);
     ctx.fillStyle = '#4ade80';
     ctx.fillRect(zone.x, zone.y, zone.w, zone.h);
     ctx.globalAlpha = 1.0;
@@ -501,10 +505,15 @@ function loop(now) {
     ctx.setLineDash([8, 5]);
     ctx.strokeRect(zone.x, zone.y, zone.w, zone.h);
     ctx.setLineDash([]);
+    // Vertical label
+    ctx.save();
+    ctx.translate(zone.x + zone.w / 2, zone.y + zone.h / 2);
+    ctx.rotate(-Math.PI / 2);
     ctx.fillStyle = '#ffffff';
-    ctx.font = '13px sans-serif';
+    ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('~ Fluff Zone ~', zone.x + zone.w / 2, zone.y + zone.h / 2 + 4);
+    ctx.fillText('FLUFF ZONE', 0, 5);
+    ctx.restore();
 
     // MATTRESS LINES
     for (var i = 0; i < lines.length; i++) {
@@ -630,23 +639,14 @@ function loop(now) {
     }
     ctx.globalAlpha = 1.0;
 
-    // DEBUG - frame counter + object count
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(0, CH - 22, 200, 22);
-    ctx.fillStyle = '#fff';
-    ctx.font = '11px monospace';
-    ctx.textAlign = 'left';
-    ctx.fillText('frame:' + frameCount + ' obj:' + objects.length + ' lines:' + lines.length, 4, CH - 7);
-
-    // Show any errors
-    if (errorLog.length > 0) {
-      ctx.fillStyle = 'rgba(255,0,0,0.8)';
-      ctx.fillRect(0, 40, CW, 20 * errorLog.length);
-      ctx.fillStyle = '#fff';
-      ctx.font = '12px monospace';
-      for (var i = 0; i < errorLog.length; i++) {
-        ctx.fillText(errorLog[i], 10, 55 + i * 20);
-      }
+    // Arrow hint pointing to fluff zone
+    if (objects.length > 0 && frameCount < 300) {
+      ctx.globalAlpha = 0.4 + 0.2 * Math.sin(now * 0.005);
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('Bounce objects here >>>', zone.x - 10, zone.y + zone.h / 2 + 5);
+      ctx.globalAlpha = 1.0;
     }
 
   } catch(err) {
