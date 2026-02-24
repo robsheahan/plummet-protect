@@ -918,6 +918,20 @@ var deathSlowmoActive = false;
 var comboFlashTimer = 0;
 var comboFlashColor = '#fbbf24';
 
+// Level transition fade (smooth screen transition between levels)
+var levelTransitionAlpha = 0; // 0 = no overlay, 1 = fully black
+var levelTransitionPhase = 0; // 0=inactive, 1=fading out, 2=hold, 3=fading in
+var levelTransitionTimer = 0; // ms remaining in current phase
+
+// Catch/crash screen border flash
+var catchFlashTimer = 0; // frames remaining for green border flash on catch
+var crashFlashTimer = 0; // frames remaining for red border flash on crash
+
+// Encouraging messages between levels
+var encouragingMessages = ['Nice work!', 'Keep going!', "You're on fire!", 'Unstoppable!', 'Great reflexes!', 'Level up!', 'Smooth moves!', 'Incredible!'];
+var levelMessage = '';
+var levelMessageTimer = 0; // frames remaining to display
+
 // Golden zone (item 8 gameplay)
 var goldenZone = null; // { side: 'left'|'right', y, h, timer, maxTimer }
 var goldenZoneSpawnTimer = 0; // ms until next golden zone spawn
@@ -1115,7 +1129,12 @@ var achievements = [
   { id: 'firstUpgrade', name: 'First Upgrade', desc: 'Buy your first upgrade', icon: '\uD83D\uDED2', check: function() { for(var k in upgrades) { if(upgrades[k].level > 0) return true; } return false; } },
   { id: 'maxUpgrade', name: 'Max Upgrade', desc: 'Max out any upgrade', icon: '\uD83D\uDCAA', check: function() { for(var k in upgrades) { if(upgrades[k].level >= 10) return true; } return false; } },
   { id: 'useShield', name: 'Shield User', desc: 'Use the floor shield', icon: '\uD83D\uDEE1', check: function() { return shieldUsed; } },
-  { id: 'goldenEgg', name: 'Golden Egg', desc: 'Catch a golden egg', icon: '\u2728', check: function() { return earnedAchievements.indexOf('goldenEgg') >= 0; } }
+  { id: 'goldenEgg', name: 'Golden Egg', desc: 'Catch a golden egg', icon: '\u2728', check: function() { return earnedAchievements.indexOf('goldenEgg') >= 0; } },
+  { id: 'level15', name: 'Level Master', desc: 'Reach level 15', icon: '\uD83C\uDF1F', check: function() { return level >= 15; } },
+  { id: 'prestige1', name: 'Prestige Player', desc: 'Prestige at least once', icon: '\uD83C\uDFC5', check: function() { return prestigeLevel >= 1; } },
+  { id: 'perfectLevel', name: 'Perfect Level', desc: 'Complete a level with zero crashes', icon: '\uD83D\uDC8E', check: function() { return earnedAchievements.indexOf('perfectLevel') >= 0; } },
+  { id: 'streak10ach', name: 'Catch Streak 10', desc: 'Catch 10 in a row without crashing', icon: '\u26A1', check: function() { return catchStreak >= 10; } },
+  { id: 'century', name: 'Century', desc: 'Reach 100 total catches in a single run', icon: '\uD83D\uDCAF', check: function() { return totalCatches >= 100; } }
 ];
 var earnedAchievements = [];
 var achievementPopup = null; // { name, icon, timer }
@@ -1451,6 +1470,13 @@ function sfxNearMiss() {
   playTone(100, 0.1, 'sawtooth', 0.03);
 }
 
+// Escalating catch ding — pitch rises with streak
+function sfxCatchDing() {
+  var freq = 400 + catchStreak * 40;
+  freq = Math.min(freq, 1200); // cap at 1200Hz
+  playTone(freq, 0.1, 'sine', 0.12);
+}
+
 function stopBgMusic() {
   if (musicMelodyTimer) { clearTimeout(musicMelodyTimer); musicMelodyTimer = null; }
   if (bgMusicInterval) { clearInterval(bgMusicInterval); bgMusicInterval = null; }
@@ -1468,7 +1494,7 @@ function sfxBomb() {
 // Consistent glow values
 var GLOW_SM = 6, GLOW_MD = 12, GLOW_LG = 18;
 
-var BASE_GRAVITY = 0.045;
+var BASE_GRAVITY = 0.035;
 var BASE_BOUNCE = 1.1;
 var GRAVITY = BASE_GRAVITY;
 var BOUNCE = BASE_BOUNCE;
@@ -1925,11 +1951,13 @@ var WALL_W = 12;
 function getZoneHeight() {
   var full = CH - WALL_W;
   var shrink = Math.max(0.18, 1 - (level - 1) * 0.045);
+  // Additional per-level shrink for later difficulty scaling
+  var levelShrink = Math.max(0.7, 1 - level * 0.015);
   // Wider zones upgrade adds 3% per level
   var zoneBonus = 1 + upgrades.widerZones.level * 0.03;
   // Skill tree: speed2 — wider zones
   if (skillTree.speed[1].owned) zoneBonus += 0.10;
-  return Math.floor(full * shrink * zoneBonus);
+  return Math.floor(full * shrink * levelShrink * zoneBonus);
 }
 function getZone() {
   var h = getZoneHeight();
@@ -1956,8 +1984,10 @@ function spawnObj() {
   var types = ['egg'];
   // New types by level
   if (level >= 4) types.push('bouncyBall');
-  // Meteors start appearing at level 5
-  if (level >= 5 && rng() < 0.10 + (level - 4) * 0.015) {
+  // Meteors start appearing at level 5 — steeper increase after level 10
+  var meteorChance = 0.10 + (level - 4) * 0.015;
+  if (level > 10) meteorChance += (level - 10) * 0.025; // extra steep after level 10
+  if (level >= 5 && rng() < meteorChance) {
     types.push('meteor');
   }
   // Golden egg - rare (8% chance)
@@ -2187,7 +2217,7 @@ document.getElementById('backBtn').onclick = function() {
     gameStats.totalTimePlayed += Math.floor((Date.now() - sessionStartTime) / 1000);
     saveProgress();
   }
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0;
+  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
   bestStreakThisRun = 0; tokensThisRun = 0;
   shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
   activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
@@ -2251,7 +2281,7 @@ function quitToHome() {
     gameStats.totalTimePlayed += Math.floor((Date.now() - sessionStartTime) / 1000);
     saveProgress();
   }
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0;
+  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
   bestStreakThisRun = 0; tokensThisRun = 0;
   shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
   activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
@@ -2345,8 +2375,8 @@ function onBounce(obj) {
     combo = 0;
     if (lives < maxLives) {
       lifeFrac++;
-      if (lifeFrac >= 4) { lifeFrac = 0; lives = Math.min(maxLives, lives + 1); }
-      floatText('+0.25 Life!', CW / 2, CH / 2, '#66bb6a');
+      if (lifeFrac >= 6) { lifeFrac = 0; lives = Math.min(maxLives, lives + 1); }
+      floatText('+Life progress!', CW / 2, CH / 2, '#66bb6a');
     }
   }
   updateHUD();
@@ -2366,6 +2396,7 @@ function onCrash(obj) {
   sfxCrash();
   floatText('CRASH!', obj.x, obj.y - 25, '#ff6b6b', 28);
   shakeAmount = 15;
+  crashFlashTimer = 10; // red border flash
   // Haptic feedback (item 18)
   if (navigator.vibrate) try { navigator.vibrate(150); } catch(e) {}
   obj.alive = false;
@@ -2419,7 +2450,7 @@ function triggerGameOver() {
 
 function dismissGameOver() {
   document.getElementById('gameOverScreen').classList.remove('show');
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0;
+  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
   bestStreakThisRun = 0; tokensThisRun = 0;
   activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
   comboMultiplier = 1; comboMultiplierTimer = 0;
@@ -2585,6 +2616,8 @@ function onCatch(obj) {
     burst(obj.x, obj.y, '#fbbf24', 25);
     safeZoneConfetti(obj.x, obj.y);
     sfxCatch();
+    sfxCatchDing(); // escalating ding
+    catchFlashTimer = 10; // green border flash
     floatText('GOLDEN! +' + goldenBonus, obj.x, obj.y - 25, '#fbbf24', 24);
     totalCatches++;
     catchStreak++;
@@ -2599,6 +2632,8 @@ function onCatch(obj) {
   burst(obj.x, obj.y, '#66bb6a', 15);
   sfxCatch(obj.type);
   sfxCatchZone();
+  sfxCatchDing(); // escalating ding
+  catchFlashTimer = 10; // green border flash
   totalCatches++;
   catchStreak++;
   if (catchStreak > bestStreakThisRun) bestStreakThisRun = catchStreak;
@@ -2663,6 +2698,13 @@ function onCatch(obj) {
     tokensThisRun += starBonus;
     saveProgress();
 
+    // Perfect level achievement — completed level with zero crashes
+    if (levelCrashes === 0 && earnedAchievements.indexOf('perfectLevel') < 0) {
+      earnedAchievements.push('perfectLevel');
+      achievementPopup = { name: 'Perfect Level', icon: '\uD83D\uDC8E', timer: 180 };
+      try { localStorage.setItem('fluffAchievements', JSON.stringify(earnedAchievements)); } catch(e) {}
+    }
+
     level = newLevel;
     levelCrashes = 0;
     levelBounces = 0;
@@ -2672,6 +2714,13 @@ function onCatch(obj) {
     levelUpFlash = 20;
     levelUpBanner = 120;
     levelUpBannerLevel = level;
+    // Smooth screen transition between levels — fade to black and back
+    levelTransitionPhase = 1; // start fade out
+    levelTransitionTimer = 300; // 300ms fade out
+    levelTransitionAlpha = 0;
+    // Encouraging message between levels
+    levelMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
+    levelMessageTimer = 120; // display for ~2 seconds
     // Camera zoom on level transition (item 19)
     cameraZoomTarget = 1.05;
     cameraZoomTimer = 1000;
@@ -2836,6 +2885,24 @@ function loop(now) {
       else if (countdownTimer > 400) countdownPhase = 1;
       else if (countdownTimer > 0) countdownPhase = -1; // GO
       else { countdownPhase = 0; spawnTimer = 100; }
+    }
+
+    // Level transition fade update
+    if (levelTransitionPhase > 0) {
+      levelTransitionTimer -= dt;
+      if (levelTransitionPhase === 1) {
+        // Fading out (to black)
+        levelTransitionAlpha = Math.min(1, 1 - levelTransitionTimer / 300);
+        if (levelTransitionTimer <= 0) { levelTransitionPhase = 2; levelTransitionTimer = 200; }
+      } else if (levelTransitionPhase === 2) {
+        // Hold black
+        levelTransitionAlpha = 1;
+        if (levelTransitionTimer <= 0) { levelTransitionPhase = 3; levelTransitionTimer = 300; }
+      } else if (levelTransitionPhase === 3) {
+        // Fading in (from black)
+        levelTransitionAlpha = Math.max(0, levelTransitionTimer / 300);
+        if (levelTransitionTimer <= 0) { levelTransitionPhase = 0; levelTransitionAlpha = 0; }
+      }
     }
 
     // Camera zoom (item 19)
@@ -3054,6 +3121,8 @@ function loop(now) {
       } else {
         objGrav = grav;
       }
+      // Per-level gravity boost for later difficulty scaling
+      objGrav += level * 0.002;
       // Item 2: Gravity flip zone — reverse gravity inside zone
       if (gravityFlipZone) {
         var gfDx = obj.x - gravityFlipZone.x;
@@ -3125,8 +3194,9 @@ function loop(now) {
         }
       }
 
-      // Rotation based on horizontal velocity (meteors spin faster)
-      obj.rot += obj.type === 'meteor' ? obj.vx * 0.08 + 0.03 : obj.vx * 0.04;
+      // Rotation based on total speed (faster objects = faster spin)
+      var totalSpeed = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
+      obj.rot += obj.type === 'meteor' ? obj.vx * 0.08 + 0.03 : obj.vx * 0.04 * Math.max(1, totalSpeed * 0.5);
       // Squash recovery (spring back to 1,1)
       obj.squashX += (1 - obj.squashX) * 0.15;
       obj.squashY += (1 - obj.squashY) * 0.15;
@@ -3319,6 +3389,8 @@ function loop(now) {
           safeZoneConfetti(obj.x, obj.y);
           floatText('GOLDEN! +' + gzTokens, obj.x, obj.y - 25, '#ffd700', 26);
           sfxCatch(obj.type);
+          sfxCatchDing();
+          catchFlashTimer = 10;
           obj.alive = false;
           totalCatches++;
           catchStreak++;
@@ -3879,6 +3951,17 @@ function loop(now) {
       ctx.fillRect(gzEdge + (goldenZone.side === 'right' ? -35 : 15), goldenZone.y + goldenZone.h - 6, gzBarW, 3);
       ctx.fillStyle = '#ffd700';
       ctx.fillRect(gzEdge + (goldenZone.side === 'right' ? -35 : 15), goldenZone.y + goldenZone.h - 6, gzBarW * gzBarFill, 3);
+      // Golden zone sparkle — twinkling dots around the zone
+      for (var gsi = 0; gsi < 5; gsi++) {
+        var gsY = goldenZone.y + (goldenZone.h / 6) * (gsi + 0.5);
+        var gsXOff = goldenZone.side === 'right' ? -15 - gsi * 5 : wallW + 15 + gsi * 5;
+        var gsAlpha = 0.3 + 0.7 * Math.abs(Math.sin(now * 0.006 + gsi * 1.3));
+        ctx.globalAlpha = gzAlpha * gsAlpha;
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.arc(gzX + gsXOff + Math.sin(now * 0.004 + gsi * 2) * 4, gsY + Math.cos(now * 0.005 + gsi * 1.7) * 3, 1.5 + Math.sin(now * 0.008 + gsi) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     }
 
@@ -4800,6 +4883,15 @@ function loop(now) {
       ctx.fillText('(?)', 70 + starTextWidth + 6, 68);
     }
 
+    // Prominent score counter — "Catches: X" near top-center
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Catches: ' + totalCatches, CW / 2, 38);
+    ctx.restore();
+
     // Ambient gameplay vignette removed for performance
 
     // Level-up screen flash — simplified to flat tint
@@ -4891,6 +4983,48 @@ function loop(now) {
       ctx.restore();
     }
 
+    // Screen border flash on catch (green) / crash (red)
+    if (catchFlashTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = (catchFlashTimer / 10) * 0.4;
+      ctx.strokeStyle = '#66bb6a';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, CW - 6, CH - 6);
+      ctx.restore();
+      catchFlashTimer--;
+    }
+    if (crashFlashTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = (crashFlashTimer / 10) * 0.5;
+      ctx.strokeStyle = '#ff6b6b';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(4, 4, CW - 8, CH - 8);
+      ctx.restore();
+      crashFlashTimer--;
+    }
+
+    // Level transition fade overlay
+    if (levelTransitionPhase > 0) {
+      ctx.save();
+      ctx.globalAlpha = levelTransitionAlpha;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.restore();
+    }
+
+    // Encouraging message between levels
+    if (levelMessageTimer > 0) {
+      levelMessageTimer--;
+      var msgAlpha = levelMessageTimer < 20 ? levelMessageTimer / 20 : Math.min(1, (120 - levelMessageTimer) / 15);
+      ctx.save();
+      ctx.globalAlpha = msgAlpha;
+      ctx.fillStyle = '#5eead4';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(levelMessage, CW / 2, CH / 2 + 100);
+      ctx.restore();
+    }
+
     // Achievement popup
     if (achievementPopup && achievementPopup.timer > 0) {
       achievementPopup.timer--;
@@ -4930,7 +5064,7 @@ function loop(now) {
 // Play Again button (item 19)
 function playAgain() {
   document.getElementById('gameOverScreen').classList.remove('show');
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0;
+  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
   bestStreakThisRun = 0; tokensThisRun = 0;
   activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
   comboMultiplier = 1; comboMultiplierTimer = 0;
@@ -5039,6 +5173,7 @@ function doPrestige() {
     levelStars = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     bestLevel = 0;
     applyUpgrades();
+    checkAchievements(); // check prestige achievement
     saveProgress();
     // Update UI
     for (var k in upgrades) {
