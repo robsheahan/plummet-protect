@@ -4307,21 +4307,6 @@ function loop(now) {
         ctx.ellipse(-4, -9, 3.5, 5, -0.3, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.fill();
-        // Blush marks
-        ctx.fillStyle = 'rgba(255,130,130,0.2)';
-        ctx.beginPath(); ctx.arc(-8, 2, 3.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(8, 2, 3.5, 0, Math.PI * 2); ctx.fill();
-        // Eyes
-        ctx.fillStyle = '#3a2818';
-        ctx.beginPath(); ctx.arc(-4, -4, 2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(4, -4, 2.5, 0, Math.PI * 2); ctx.fill();
-        // Eye highlights (one per eye)
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(-3, -5, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(5, -5, 1.1, 0, Math.PI * 2); ctx.fill();
-        // Smile with subtle wobble
-        var smileWobble = Math.sin(now * 0.003) * 0.1;
-        ctx.beginPath(); ctx.arc(0, 1, 4, 0.2 + smileWobble, Math.PI - 0.2 + smileWobble); ctx.strokeStyle = '#6b5030'; ctx.lineWidth = 1.5; ctx.stroke();
         if (obj.golden) ctx.shadowBlur = 0;
       } else if (obj.type === 'meteor') {
         // Hyper-realistic meteor rendering
@@ -4641,32 +4626,6 @@ function loop(now) {
         ctx.restore();
       }
 
-      // Item 18: Object expressions on eggs
-      if (obj.type === 'egg' && !obj.golden && !obj.isDecoy && !obj._mergedBonus) {
-        // Override the default egg face with expression based on velocity
-        var speed2 = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
-        if (obj.vy > 3) {
-          // Worried face — wide eyes, downturned mouth
-          // Eyes already drawn, just add wider look
-          ctx.fillStyle = '#fff';
-          ctx.beginPath(); ctx.arc(-4, -5, 1.5, 0, Math.PI * 2); ctx.fill();
-          ctx.beginPath(); ctx.arc(4, -5, 1.5, 0, Math.PI * 2); ctx.fill();
-          // Worried mouth
-          ctx.strokeStyle = '#6b5030';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(0, 4, 3, Math.PI + 0.3, -0.3);
-          ctx.stroke();
-        } else if (obj.vy < -1) {
-          // Happy face — smile, normal eyes
-          ctx.strokeStyle = '#6b5030';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, 5, 0.2, Math.PI - 0.2);
-          ctx.stroke();
-        }
-        // Neutral: default egg face is already drawn
-      }
 
       // Item 12: Egg skins
       if (obj.type === 'egg' && !obj.golden && !obj.isDecoy && !obj._mergedBonus && activeEggSkin !== 'default') {
