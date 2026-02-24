@@ -1468,7 +1468,7 @@ function sfxBomb() {
 // Consistent glow values
 var GLOW_SM = 6, GLOW_MD = 12, GLOW_LG = 18;
 
-var BASE_GRAVITY = 0.07;
+var BASE_GRAVITY = 0.045;
 var BASE_BOUNCE = 1.1;
 var GRAVITY = BASE_GRAVITY;
 var BOUNCE = BASE_BOUNCE;
@@ -3012,7 +3012,7 @@ function loop(now) {
         for (var i = 0; i < objects.length; i++) { if (objects[i].alive) activeCount++; }
         var maxObj = Math.min(2 + level, 12) + difficultyMultipliers[gameDifficulty].maxObjBonus;
         if (activeCount < maxObj) spawnObj();
-        var spawnInterval = Math.max(700, 2500 - level * 120);
+        var spawnInterval = Math.max(900, 3200 - level * 140);
         // Difficulty spawn rate
         spawnInterval /= difficultyMultipliers[gameDifficulty].spawnRate;
         spawnTimer = spawnInterval;
