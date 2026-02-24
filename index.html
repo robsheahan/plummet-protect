@@ -3462,32 +3462,9 @@ function loop(now) {
     ctx.fillStyle = grad;
     ctx.fillRect(-20, -20, CW + 40, CH + 40);
 
-    // Aurora / Nebula effect - subtle animated color waves
-    var auroraIntensity = level >= 13 ? 0.12 : level >= 9 ? 0.06 : 0.03;
-    for (var ai = 0; ai < 3; ai++) {
-      var aPhase = now * 0.0003 + ai * 2.1;
-      var aX = CW * (0.3 + 0.4 * Math.sin(aPhase));
-      var aY = CH * (0.15 + 0.15 * Math.cos(aPhase * 0.7 + ai));
-      var aR = CH * (0.25 + 0.1 * Math.sin(aPhase * 0.5));
-      var aHue = (now * 0.01 + ai * 120) % 360;
-      var aGrad = ctx.createRadialGradient(aX, aY, 0, aX, aY, aR);
-      aGrad.addColorStop(0, 'hsla(' + aHue + ', 60%, 50%, ' + (auroraIntensity * 0.7) + ')');
-      aGrad.addColorStop(0.4, 'hsla(' + ((aHue + 30) % 360) + ', 50%, 40%, ' + (auroraIntensity * 0.3) + ')');
-      aGrad.addColorStop(1, 'hsla(' + aHue + ', 40%, 30%, 0)');
-      ctx.fillStyle = aGrad;
-      ctx.fillRect(-20, -20, CW + 40, CH + 40);
-    }
+    // Aurora/nebula and haze removed for performance
 
-    // Atmospheric haze near bottom
-    var hazeGrad = ctx.createLinearGradient(0, CH * 0.65, 0, CH);
-    var hazeColor = level >= 13 ? '10, 5, 30' : level >= 9 ? '40, 20, 30' : '200, 210, 220';
-    hazeGrad.addColorStop(0, 'rgba(' + hazeColor + ', 0)');
-    hazeGrad.addColorStop(0.5, 'rgba(' + hazeColor + ', 0.06)');
-    hazeGrad.addColorStop(1, 'rgba(' + hazeColor + ', 0.15)');
-    ctx.fillStyle = hazeGrad;
-    ctx.fillRect(0, CH * 0.65, CW, CH * 0.35);
-
-    // Stars for night/space levels (13+)
+    // Stars for night/space levels (13+) — simplified
     if (level >= 13) {
       var starAlpha = Math.min(1, (level - 12) / 3);
       ctx.globalAlpha = starAlpha;
@@ -3496,28 +3473,10 @@ function loop(now) {
         var sy = (si * 53 + 7) % (CH * 0.7);
         var sFlicker = 0.3 + 0.7 * Math.abs(Math.sin(now * 0.001 + si * 1.7));
         var starSize = 0.8 + (si % 4) * 0.5;
-        // Larger stars get a soft glow halo
-        if (starSize > 1.5) {
-          ctx.fillStyle = 'rgba(200,220,255,' + (sFlicker * 0.15) + ')';
-          ctx.beginPath();
-          ctx.arc(sx, sy, starSize * 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        // Star color variety
-        var starColors = ['255,255,255', '200,220,255', '255,240,220', '220,200,255'];
-        ctx.fillStyle = 'rgba(' + starColors[si % 4] + ',' + (sFlicker * 0.7) + ')';
+        ctx.fillStyle = 'rgba(255,255,255,' + (sFlicker * 0.7) + ')';
         ctx.beginPath();
         ctx.arc(sx, sy, starSize, 0, Math.PI * 2);
         ctx.fill();
-        // Twinkle cross on brightest stars
-        if (si % 7 === 0 && sFlicker > 0.7) {
-          ctx.strokeStyle = 'rgba(255,255,255,' + (sFlicker * 0.3) + ')';
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(sx - starSize * 2, sy); ctx.lineTo(sx + starSize * 2, sy);
-          ctx.moveTo(sx, sy - starSize * 2); ctx.lineTo(sx, sy + starSize * 2);
-          ctx.stroke();
-        }
       }
       ctx.globalAlpha = 1.0;
     }
@@ -3554,11 +3513,8 @@ function loop(now) {
         var ss = bgShootingStars[si2];
         ctx.save();
         ctx.globalAlpha = ss.life * 0.7;
-        // Trail
-        var trailGrad = ctx.createLinearGradient(ss.x, ss.y, ss.x - ss.vx * 8, ss.y - ss.vy * 8);
-        trailGrad.addColorStop(0, 'rgba(255,255,255,0.8)');
-        trailGrad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.strokeStyle = trailGrad;
+        // Trail — simple white line
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(ss.x, ss.y);
@@ -3572,7 +3528,7 @@ function loop(now) {
       }
     }
 
-    // Clouds - volumetric with soft edges, layered opacity, inner light
+    // Clouds — simplified to 2 ellipses per cloud
     var cloudDefs = [
       { offset: 0, baseY: 50, depth: 0.3, scale: 0.8 },
       { offset: 190, baseY: 115, depth: 0.5, scale: 1.0 },
@@ -3587,73 +3543,23 @@ function loop(now) {
       var sc = cd.scale;
       var cloudAlpha = 0.06 + cd.depth * 0.14;
       var isNight = level >= 13;
-      var cloudR = isNight ? 180 : 255, cloudG = isNight ? 190 : 255, cloudB = isNight ? 220 : 255;
-
-      // Layer 1: Outermost soft haze (very transparent, large)
-      ctx.save();
-      ctx.globalAlpha = cloudAlpha * 0.3;
-      var hazeR = 60 * sc;
-      var hazeGr = ctx.createRadialGradient(cx + 25 * sc, cy, 5, cx + 25 * sc, cy, hazeR);
-      hazeGr.addColorStop(0, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ', 0.15)');
-      hazeGr.addColorStop(0.6, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ', 0.06)');
-      hazeGr.addColorStop(1, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ', 0)');
-      ctx.fillStyle = hazeGr;
+      var cloudColor = isNight ? 'rgba(180,190,220,' : 'rgba(255,255,255,';
+      // Main cloud puff
+      ctx.globalAlpha = cloudAlpha;
+      ctx.fillStyle = cloudColor + cloudAlpha + ')';
       ctx.beginPath();
-      ctx.arc(cx + 25 * sc, cy, hazeR, 0, Math.PI * 2);
+      ctx.ellipse(cx + 20 * sc, cy, 40 * sc, 18 * sc, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-
-      // Layer 2: Main cloud body with multiple puffs
-      var mainGrad = ctx.createRadialGradient(cx + 20 * sc, cy - 5 * sc, 3, cx + 20 * sc, cy, 45 * sc);
-      mainGrad.addColorStop(0, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ',' + (cloudAlpha + 0.1) + ')');
-      mainGrad.addColorStop(0.3, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ',' + (cloudAlpha + 0.04) + ')');
-      mainGrad.addColorStop(0.7, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ',' + cloudAlpha * 0.5 + ')');
-      mainGrad.addColorStop(1, 'rgba(' + cloudR + ',' + cloudG + ',' + cloudB + ',0)');
-      ctx.fillStyle = mainGrad;
+      // Secondary puff
       ctx.beginPath();
-      ctx.arc(cx, cy, 25 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 18 * sc, cy - 8 * sc, 22 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 38 * sc, cy - 3 * sc, 26 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 55 * sc, cy + 2 * sc, 20 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 10 * sc, cy + 6 * sc, 18 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 30 * sc, cy + 8 * sc, 16 * sc, 0, Math.PI * 2);
-      ctx.arc(cx - 8 * sc, cy + 4 * sc, 14 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 48 * sc, cy + 6 * sc, 12 * sc, 0, Math.PI * 2);
+      ctx.ellipse(cx + 45 * sc, cy + 3 * sc, 28 * sc, 14 * sc, 0, 0, Math.PI * 2);
       ctx.fill();
-
-      // Layer 3: Bright inner highlight (top-lit effect)
-      ctx.save();
-      ctx.globalAlpha = cloudAlpha * 0.6;
-      var innerGrad = ctx.createRadialGradient(cx + 22 * sc, cy - 10 * sc, 2, cx + 22 * sc, cy - 5 * sc, 25 * sc);
-      innerGrad.addColorStop(0, 'rgba(255,255,255,' + (isNight ? 0.08 : 0.18) + ')');
-      innerGrad.addColorStop(0.5, 'rgba(255,255,255,' + (isNight ? 0.03 : 0.06) + ')');
-      innerGrad.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = innerGrad;
-      ctx.beginPath();
-      ctx.arc(cx + 18 * sc, cy - 6 * sc, 22 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 38 * sc, cy - 5 * sc, 18 * sc, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      // Layer 4: Bottom shadow (underlit darkness)
-      ctx.save();
-      ctx.globalAlpha = 0.04 * cd.depth;
-      ctx.fillStyle = isNight ? '#0a0520' : 'rgba(80,80,120,1)';
-      ctx.beginPath();
-      ctx.arc(cx + 15 * sc, cy + 10 * sc, 22 * sc, 0, Math.PI * 2);
-      ctx.arc(cx + 35 * sc, cy + 10 * sc, 18 * sc, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
     }
+    ctx.globalAlpha = 1.0;
 
-    // Ground glow above floor
-    var floorGlow = ctx.createLinearGradient(0, CH - WALL_W - 40, 0, CH - WALL_W);
-    floorGlow.addColorStop(0, 'rgba(0,0,0,0)');
-    floorGlow.addColorStop(1, 'rgba(0,0,0,0.08)');
-    ctx.fillStyle = floorGlow;
-    ctx.fillRect(0, CH - WALL_W - 40, CW, 40);
+    // Ground glow removed for performance
 
-    // Floor shield — translucent energy field with hex grid, ripples, and crackling
+    // Floor shield — simplified
     if (shieldActive && shieldTimeLeft > 0) {
       var shieldAlpha = Math.min(1, shieldTimeLeft / 500);
       var shieldPulse = 0.6 + 0.4 * Math.sin(now * 0.004);
@@ -3664,193 +3570,30 @@ function loop(now) {
       var shieldH = 30;
       ctx.save();
 
-      // Dome / arc shape — translucent energy field with layered gradient
-      ctx.globalAlpha = shieldAlpha * 0.12 * shieldPulse;
-      var domeGrad = ctx.createLinearGradient(0, shieldY - shieldH * 1.5, 0, shieldY + 4);
-      domeGrad.addColorStop(0, 'rgba(60, 200, 255, 0)');
-      domeGrad.addColorStop(0.2, 'rgba(80, 180, 255, 0.3)');
-      domeGrad.addColorStop(0.5, 'rgba(96, 200, 255, 0.5)');
-      domeGrad.addColorStop(0.8, 'rgba(60, 160, 255, 0.4)');
-      domeGrad.addColorStop(1, 'rgba(40, 120, 250, 0.2)');
-      ctx.fillStyle = domeGrad;
-      ctx.beginPath();
-      ctx.moveTo(shieldX1, shieldY + 4);
-      ctx.quadraticCurveTo(CW / 2, shieldY - shieldH * 1.5, shieldX2, shieldY + 4);
-      ctx.closePath();
-      ctx.fill();
-      // Second translucent layer for depth
-      ctx.globalAlpha = shieldAlpha * 0.06;
-      var domeGrad2 = ctx.createRadialGradient(CW / 2, shieldY, 5, CW / 2, shieldY - shieldH * 0.5, shieldW * 0.5);
-      domeGrad2.addColorStop(0, 'rgba(180, 230, 255, 0.6)');
-      domeGrad2.addColorStop(1, 'rgba(60, 140, 255, 0)');
-      ctx.fillStyle = domeGrad2;
+      // Simple dome arc
+      ctx.globalAlpha = shieldAlpha * 0.15 * shieldPulse;
+      ctx.fillStyle = 'rgba(80, 180, 255, 0.4)';
       ctx.beginPath();
       ctx.moveTo(shieldX1, shieldY + 4);
       ctx.quadraticCurveTo(CW / 2, shieldY - shieldH * 1.5, shieldX2, shieldY + 4);
       ctx.closePath();
       ctx.fill();
 
-      // Hex grid pattern across the dome — with ripple waves
-      ctx.globalAlpha = shieldAlpha * 0.3 * shieldPulse;
-      var hexSize = 18;
-      var hexRows = 3;
-      // Ripple center moves over time
-      var rippleCenterX = CW / 2 + Math.sin(now * 0.002) * shieldW * 0.25;
-      var rippleCenterY = shieldY - shieldH * 0.5;
-      for (var hr = 0; hr < hexRows; hr++) {
-        var rowY = shieldY - 4 - hr * (hexSize * 0.85);
-        var rowOffset = (hr % 2) * (hexSize * 0.87);
-        var t = (shieldY + 4 - rowY) / (shieldH * 1.5);
-        var domeW = shieldW * Math.sqrt(Math.max(0, t * (2 - t)));
-        var rowX1 = CW / 2 - domeW / 2;
-        var rowX2 = CW / 2 + domeW / 2;
-        for (var hx = rowX1 + rowOffset; hx < rowX2; hx += hexSize * 1.73) {
-          // Ripple effect from moving center
-          var distToRipple = Math.sqrt((hx - rippleCenterX) * (hx - rippleCenterX) + (rowY - rippleCenterY) * (rowY - rippleCenterY));
-          var rippleWave = Math.sin(distToRipple * 0.08 - now * 0.006) * 0.5 + 0.5;
-          var hexAlpha = 0.2 + 0.8 * rippleWave;
-          // Hex fill with subtle color
-          ctx.fillStyle = 'rgba(100, 200, 255, ' + (hexAlpha * shieldAlpha * 0.08) + ')';
-          ctx.beginPath();
-          for (var hi = 0; hi < 6; hi++) {
-            var angle = Math.PI / 3 * hi - Math.PI / 6;
-            var px = hx + Math.cos(angle) * hexSize * 0.45;
-            var py = rowY + Math.sin(angle) * hexSize * 0.45;
-            if (hi === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-          }
-          ctx.closePath();
-          ctx.fill();
-          // Hex outline
-          ctx.strokeStyle = 'rgba(120, 210, 255, ' + (hexAlpha * shieldAlpha * 0.55) + ')';
-          ctx.lineWidth = rippleWave > 0.7 ? 1.5 : 0.8;
-          ctx.stroke();
-        }
-      }
-
-      // Crackling energy arcs across the dome
-      ctx.globalAlpha = shieldAlpha * 0.5;
-      for (var ci = 0; ci < 3; ci++) {
-        var crackSeed = Math.floor(now * 0.008 + ci * 37) * 137;
-        var crackAlpha = Math.sin(now * 0.02 + ci * 2.5) * 0.5 + 0.5;
-        if (crackAlpha > 0.3) {
-          var csx = shieldX1 + ((crackSeed * 0.618) % 1) * shieldW;
-          var cex = shieldX1 + (((crackSeed + 77) * 0.618) % 1) * shieldW;
-          var cmx = (csx + cex) / 2 + Math.sin(crackSeed) * 20;
-          var cmy = shieldY - 8 - Math.abs(Math.sin(crackSeed * 0.7)) * shieldH * 0.6;
-          ctx.strokeStyle = 'rgba(200, 240, 255, ' + (crackAlpha * 0.7) + ')';
-          ctx.lineWidth = 1;
-          ctx.shadowColor = '#a0e8ff';
-          ctx.shadowBlur = 6;
-          ctx.beginPath();
-          ctx.moveTo(csx, shieldY - 2);
-          // Zigzag crack with 3 segments
-          var steps = 3;
-          for (var cs = 1; cs <= steps; cs++) {
-            var ct = cs / steps;
-            var lx = csx + (cex - csx) * ct;
-            var ly = shieldY - 2 + (cmy - shieldY + 2) * Math.sin(ct * Math.PI);
-            lx += Math.sin(crackSeed * cs) * 8;
-            ctx.lineTo(lx, ly);
-          }
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-        }
-      }
-
-      // Main energy bar at the base — double glow
+      // Main energy bar at the base
       ctx.globalAlpha = shieldAlpha * shieldPulse;
-      ctx.shadowColor = '#60d0ff';
-      ctx.shadowBlur = 25;
-      var barGrad = ctx.createLinearGradient(shieldX1, 0, shieldX2, 0);
-      barGrad.addColorStop(0, 'rgba(60, 180, 255, 0)');
-      barGrad.addColorStop(0.08, 'rgba(60, 180, 255, 0.8)');
-      barGrad.addColorStop(0.3, 'rgba(120, 220, 255, 1)');
-      barGrad.addColorStop(0.5, 'rgba(200, 245, 255, 1)');
-      barGrad.addColorStop(0.7, 'rgba(120, 220, 255, 1)');
-      barGrad.addColorStop(0.92, 'rgba(60, 180, 255, 0.8)');
-      barGrad.addColorStop(1, 'rgba(60, 180, 255, 0)');
-      ctx.strokeStyle = barGrad;
+      ctx.strokeStyle = 'rgba(120, 220, 255, 0.9)';
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.moveTo(shieldX1, shieldY);
       ctx.lineTo(shieldX2, shieldY);
       ctx.stroke();
-      // White-hot core line
-      ctx.globalAlpha = shieldAlpha * shieldPulse * 0.4;
-      ctx.shadowBlur = 4;
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(shieldX1 + 5, shieldY);
-      ctx.lineTo(shieldX2 - 5, shieldY);
-      ctx.stroke();
 
-      // Secondary inner glow line
-      ctx.globalAlpha = shieldAlpha * 0.35;
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#80dfff';
-      ctx.strokeStyle = 'rgba(180, 235, 255, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(shieldX1 + 15, shieldY - 2);
-      ctx.lineTo(shieldX2 - 15, shieldY - 2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Travelling energy sparks along the bar — 6 sparks with trails
-      ctx.globalAlpha = shieldAlpha;
-      for (var si = 0; si < 6; si++) {
-        var sparkDir = si % 2 === 0 ? 1 : -1;
-        var sparkT = ((now * 0.0015 * sparkDir + si * 0.166) % 1 + 1) % 1;
-        var sparkX = shieldX1 + sparkT * shieldW;
-        var sparkBright = Math.sin(sparkT * Math.PI);
-        ctx.shadowColor = '#a0f0ff';
-        ctx.shadowBlur = 12;
-        ctx.fillStyle = 'rgba(220, 248, 255, ' + (sparkBright * 0.95) + ')';
-        ctx.beginPath();
-        ctx.arc(sparkX, shieldY, 2.5 + sparkBright * 2, 0, Math.PI * 2);
-        ctx.fill();
-        // Spark trail (3 fading dots)
-        for (var st = 1; st <= 3; st++) {
-          var trailT = ((sparkT - st * 0.015 * sparkDir) % 1 + 1) % 1;
-          var trailX = shieldX1 + trailT * shieldW;
-          ctx.fillStyle = 'rgba(100, 200, 255, ' + (sparkBright * 0.3 / st) + ')';
-          ctx.beginPath();
-          ctx.arc(trailX, shieldY, 1.5 / st, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.shadowBlur = 0;
-
-      // Rising energy particles — more numerous with glow
-      ctx.globalAlpha = shieldAlpha * 0.6;
-      for (var pi = 0; pi < 12; pi++) {
-        var pt = ((now * 0.001 + pi * 0.083) % 1);
-        var px = shieldX1 + ((pi * 137.5) % shieldW);
-        var py = shieldY - pt * shieldH * 1.0;
-        var pAlpha = (1 - pt) * 0.8;
-        var pSize = 2 * (1 - pt);
-        ctx.shadowColor = '#80dfff';
-        ctx.shadowBlur = 4;
-        ctx.fillStyle = 'rgba(160, 230, 255, ' + pAlpha + ')';
-        ctx.beginPath();
-        ctx.arc(px, py, pSize, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.shadowBlur = 0;
-
-      // Shield timer text with dramatic glow
+      // Shield timer text
       ctx.globalAlpha = shieldAlpha * 0.9;
       ctx.fillStyle = '#d0f0ff';
       ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
-      ctx.shadowColor = '#60d0ff';
-      ctx.shadowBlur = 10;
       ctx.fillText('\u{1F6E1} ' + Math.ceil(shieldTimeLeft / 1000) + 's', CW / 2, shieldY - shieldH - 4);
-      // Double render for extra glow
-      ctx.globalAlpha = shieldAlpha * 0.4;
-      ctx.fillText('\u{1F6E1} ' + Math.ceil(shieldTimeLeft / 1000) + 's', CW / 2, shieldY - shieldH - 4);
-      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
@@ -3877,7 +3620,7 @@ function loop(now) {
       // Label text with glow
       ctx.globalAlpha = 0.95;
       ctx.shadowColor = pu.color;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 0;
       ctx.fillStyle = pu.color;
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
@@ -3888,34 +3631,12 @@ function loop(now) {
       ctx.beginPath();
       ctx.roundRect(puX - effectBarW / 2, effectY + 3, effectBarW, effectBarH, 2.5);
       ctx.fill();
-      // Timer bar fill with gradient
+      // Timer bar fill — flat color
       var barFill = Math.max(0, pu.time / pu.max);
-      var puBarGrad = ctx.createLinearGradient(puX - effectBarW / 2, 0, puX - effectBarW / 2 + effectBarW * barFill, 0);
-      puBarGrad.addColorStop(0, pu.color);
-      puBarGrad.addColorStop(1, '#fff');
-      ctx.fillStyle = puBarGrad;
-      ctx.shadowColor = pu.color;
-      ctx.shadowBlur = 6;
+      ctx.fillStyle = pu.color;
       ctx.beginPath();
       ctx.roundRect(puX - effectBarW / 2, effectY + 3, effectBarW * barFill, effectBarH, 2.5);
       ctx.fill();
-      ctx.shadowBlur = 0;
-      // Bright leading edge
-      if (barFill > 0.05) {
-        var edgeX = puX - effectBarW / 2 + effectBarW * barFill;
-        ctx.fillStyle = 'rgba(255,255,255,0.8)';
-        ctx.beginPath();
-        ctx.arc(edgeX, effectY + 3 + effectBarH / 2, effectBarH / 2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      // Flash when low — more dramatic pulsing
-      if (pu.time < 2000) {
-        var flashAlpha = 0.6 * Math.abs(Math.sin(now * 0.012));
-        ctx.fillStyle = 'rgba(255,255,255,' + flashAlpha + ')';
-        ctx.beginPath();
-        ctx.roundRect(puX - effectBarW / 2, effectY + 3, effectBarW * barFill, effectBarH, 2.5);
-        ctx.fill();
-      }
     }
 
     // Combo meter bar (progress toward next life)
@@ -3932,21 +3653,11 @@ function loop(now) {
       ctx.beginPath();
       ctx.roundRect(comboBarX, comboBarY, comboBarW, comboBarH, 3);
       ctx.fill();
-      // Fill
-      var comboGrad = ctx.createLinearGradient(comboBarX, 0, comboBarX + comboBarW, 0);
-      comboGrad.addColorStop(0, '#f472b6');
-      comboGrad.addColorStop(1, '#fb923c');
-      ctx.fillStyle = comboGrad;
+      // Fill — flat color
+      ctx.fillStyle = '#f472b6';
       ctx.beginPath();
       ctx.roundRect(comboBarX, comboBarY, comboBarW * comboFill, comboBarH, 3);
       ctx.fill();
-      // Glow on fill
-      ctx.shadowColor = '#f472b6';
-      ctx.shadowBlur = 6;
-      ctx.beginPath();
-      ctx.roundRect(comboBarX, comboBarY, comboBarW * comboFill, comboBarH, 3);
-      ctx.fill();
-      ctx.shadowBlur = 0;
       // Life recovery dots
       ctx.globalAlpha = 0.5;
       ctx.fillStyle = '#fff';
@@ -3966,145 +3677,48 @@ function loop(now) {
     // WALLS
     var wallW = 12;
 
-    // Floor with gradient
-    var floorGrad2 = ctx.createLinearGradient(0, CH - wallW, 0, CH);
-    floorGrad2.addColorStop(0, '#9ca3af');
-    floorGrad2.addColorStop(0.3, '#6b7280');
-    floorGrad2.addColorStop(1, '#4b5563');
-    ctx.fillStyle = floorGrad2;
+    // Floor — flat fill
+    ctx.fillStyle = '#6b7280';
     ctx.fillRect(0, CH - wallW, CW, wallW);
     // Floor shine line
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.fillRect(0, CH - wallW, CW, 2);
-    // Floor reflection
-    var reflGrad = ctx.createLinearGradient(0, CH - wallW - 25, 0, CH - wallW);
-    reflGrad.addColorStop(0, 'rgba(255,255,255,0)');
-    reflGrad.addColorStop(1, 'rgba(255,255,255,0.04)');
-    ctx.fillStyle = reflGrad;
-    ctx.fillRect(0, CH - wallW - 25, CW, 25);
 
-    // Parallax foreground elements (item 3 visual) — detailed with layered silhouettes
+    // Parallax foreground elements — simplified silhouettes
     for (var fgi = 0; fgi < foregroundElements.length; fgi++) {
       var fe = foregroundElements[fgi];
       var feX = ((fe.x + now * 0.00003 * fe.depth * 30) % (CW + 40)) - 20;
       var feY = CH - wallW;
       var isNight = level >= 13;
-      ctx.save();
       ctx.globalAlpha = 0.18 + fe.depth * 0.12;
       if (fe.type === 'grass') {
-        // Multi-blade grass tuft with subtle wind sway
-        var windSway = Math.sin(now * 0.002 + fe.x * 0.05) * 2 * fe.depth;
-        // Back layer — darker, slightly offset
-        ctx.fillStyle = isNight ? '#0f1a0f' : '#1a3a0a';
-        ctx.beginPath();
-        ctx.moveTo(feX - 1, feY);
-        ctx.quadraticCurveTo(feX - fe.width * 0.4 + windSway * 0.7, feY - fe.height * 0.9, feX - fe.width * 0.15 + windSway, feY - fe.height * 1.1);
-        ctx.quadraticCurveTo(feX + fe.width * 0.05 + windSway * 0.5, feY - fe.height * 0.7, feX + fe.width * 0.25 + windSway, feY - fe.height * 0.95);
-        ctx.quadraticCurveTo(feX + fe.width * 0.45, feY - fe.height * 0.4, feX + fe.width + 1, feY);
-        ctx.closePath();
-        ctx.fill();
-        // Front layer — brighter green blades
+        // Simple triangle grass
         ctx.fillStyle = isNight ? '#1a2a1a' : '#2d5016';
         ctx.beginPath();
         ctx.moveTo(feX, feY);
-        ctx.quadraticCurveTo(feX - fe.width * 0.3 + windSway, feY - fe.height, feX - fe.width * 0.1 + windSway * 1.2, feY - fe.height * 1.2);
-        ctx.quadraticCurveTo(feX + fe.width * 0.1 + windSway * 0.8, feY - fe.height * 0.8, feX + fe.width * 0.3 + windSway, feY - fe.height * 1.1);
-        ctx.quadraticCurveTo(feX + fe.width * 0.5, feY - fe.height * 0.5, feX + fe.width, feY);
-        ctx.closePath();
-        ctx.fill();
-        // Highlight blade tip
-        ctx.globalAlpha *= 0.4;
-        ctx.fillStyle = isNight ? '#2a3a2a' : '#4a7a28';
-        ctx.beginPath();
-        ctx.moveTo(feX - fe.width * 0.1 + windSway * 1.2, feY - fe.height * 1.2);
-        ctx.quadraticCurveTo(feX + windSway, feY - fe.height * 1.0, feX + fe.width * 0.1, feY - fe.height * 0.9);
-        ctx.lineTo(feX - fe.width * 0.05 + windSway, feY - fe.height * 1.05);
+        ctx.lineTo(feX + fe.width * 0.5, feY - fe.height);
+        ctx.lineTo(feX + fe.width, feY);
         ctx.closePath();
         ctx.fill();
       } else {
-        // Rooftop silhouette — more detailed with windows and antenna
+        // Simple building rectangle
         var rw = fe.width * 2;
         var rh = fe.height;
-        // Building body with gradient
-        var bldGrad = ctx.createLinearGradient(feX, feY - rh, feX, feY);
-        bldGrad.addColorStop(0, isNight ? '#0a0a0f' : '#2d3748');
-        bldGrad.addColorStop(0.5, isNight ? '#0d0d14' : '#374151');
-        bldGrad.addColorStop(1, isNight ? '#111118' : '#3f4a5c');
-        ctx.fillStyle = bldGrad;
+        ctx.fillStyle = isNight ? '#0d0d14' : '#374151';
         ctx.fillRect(feX, feY - rh, rw, rh);
-        // Rooftop edge — slightly lighter
-        ctx.fillStyle = isNight ? '#161620' : '#4a5568';
-        ctx.fillRect(feX - 1, feY - rh, rw + 2, 2);
-        // Chimney
-        ctx.fillStyle = isNight ? '#0e0e16' : '#2d3748';
-        ctx.fillRect(feX + rw * 0.15, feY - rh - 6, 5, 6);
-        // Chimney cap
-        ctx.fillRect(feX + rw * 0.15 - 1, feY - rh - 7, 7, 2);
-        // Small windows — faint glow
-        if (rw > 8) {
-          var winCount = Math.floor(rw / 6);
-          for (var wi = 0; wi < winCount; wi++) {
-            var wx = feX + 2 + wi * (rw - 4) / winCount;
-            var wy = feY - rh * 0.6;
-            // Window glow
-            if (isNight) {
-              ctx.fillStyle = 'rgba(255, 220, 120, 0.15)';
-              ctx.fillRect(wx, wy, 3, 3);
-            } else {
-              ctx.fillStyle = 'rgba(200, 220, 240, 0.2)';
-              ctx.fillRect(wx, wy, 3, 3);
-            }
-          }
-        }
-        // Antenna on taller buildings
-        if (rh > 14) {
-          ctx.strokeStyle = isNight ? '#1a1a24' : '#4a5568';
-          ctx.lineWidth = 0.8;
-          ctx.beginPath();
-          ctx.moveTo(feX + rw * 0.7, feY - rh);
-          ctx.lineTo(feX + rw * 0.7, feY - rh - 8);
-          ctx.stroke();
-        }
       }
-      ctx.globalAlpha = 1.0;
-      ctx.restore();
     }
+    ctx.globalAlpha = 1.0;
 
-    // Right wall with gradient
-    var rwGrad = ctx.createLinearGradient(CW - wallW, 0, CW, 0);
-    rwGrad.addColorStop(0, '#9ca3af');
-    rwGrad.addColorStop(0.5, '#6b7280');
-    rwGrad.addColorStop(1, '#4b5563');
-    ctx.fillStyle = rwGrad;
+    // Right wall — flat fill
+    ctx.fillStyle = '#6b7280';
     ctx.fillRect(CW - wallW, 0, wallW, zone.y);
     ctx.fillRect(CW - wallW, zone.y + zone.h, wallW, CH - zone.y - zone.h);
-    // Subtle wall pattern
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 1;
-    for (var wy = 0; wy < CH; wy += 8) {
-      if (wy > zone.y && wy < zone.y + zone.h) continue;
-      ctx.beginPath();
-      ctx.moveTo(CW - wallW, wy);
-      ctx.lineTo(CW, wy);
-      ctx.stroke();
-    }
 
-    // Left wall with gradient
-    var lwGrad = ctx.createLinearGradient(0, 0, wallW, 0);
-    lwGrad.addColorStop(0, '#4b5563');
-    lwGrad.addColorStop(0.5, '#6b7280');
-    lwGrad.addColorStop(1, '#9ca3af');
-    ctx.fillStyle = lwGrad;
+    // Left wall — flat fill
+    ctx.fillStyle = '#6b7280';
     ctx.fillRect(0, 0, wallW, zoneL.y);
     ctx.fillRect(0, zoneL.y + zoneL.h, wallW, CH - zoneL.y - zoneL.h);
-    // Subtle wall pattern
-    for (var wy = 0; wy < CH; wy += 8) {
-      if (wy > zoneL.y && wy < zoneL.y + zoneL.h) continue;
-      ctx.beginPath();
-      ctx.moveTo(0, wy);
-      ctx.lineTo(wallW, wy);
-      ctx.stroke();
-    }
 
     // === SAFE ZONE RENDERING (shared setup) ===
     // Check proximity of objects to safe zones for pulse intensity (item 4)
@@ -4139,130 +3753,41 @@ function loop(now) {
     function drawSafeZone(zd, dir) {
       var zx = dir === 1 ? CW - wallW : 0;
       var edgeX = dir === 1 ? CW - wallW : wallW;
-      var glowDir = dir;
 
-      // Safe zone color differentiation: right = cyan-tinted, left = lime-tinted
-      // Colorblind mode: use blue instead of green
-      var zoneMainR, zoneSecR, zoneHighR, zoneGlowHex, zoneChevHigh, zoneChevLow;
+      // Safe zone colors
+      var zoneMainR, zoneHighR, zoneChevHigh;
       if (colorblindMode) {
         zoneMainR = '59, 130, 246';
-        zoneSecR = '96, 165, 250';
         zoneHighR = '147, 197, 253';
-        zoneGlowHex = '#60a5fa';
         zoneChevHigh = '#93c5fd';
-        zoneChevLow = '#60a5fa';
       } else {
         zoneMainR = dir === 1 ? '52, 211, 153' : '163, 230, 53';
-        zoneSecR = dir === 1 ? '74, 222, 128' : '132, 204, 22';
         zoneHighR = dir === 1 ? '134, 239, 172' : '190, 242, 100';
-        zoneGlowHex = dir === 1 ? '#34d399' : '#a3e635';
         zoneChevHigh = dir === 1 ? '#86efac' : '#bef264';
-        zoneChevLow = dir === 1 ? '#34d399' : '#a3e635';
       }
 
       ctx.save();
 
-      // Outer ambient glow
-      var ambGlow = dir === 1
-        ? ctx.createLinearGradient(edgeX - 50, 0, CW, 0)
-        : ctx.createLinearGradient(0, 0, edgeX + 50, 0);
-      ambGlow.addColorStop(dir === 1 ? 0 : 1, 'rgba(' + zoneSecR + ', 0)');
-      ambGlow.addColorStop(dir === 1 ? 0.4 : 0.6, 'rgba(' + zoneSecR + ', ' + pulse * 0.08 + ')');
-      ambGlow.addColorStop(dir === 1 ? 1 : 0, 'rgba(' + zoneSecR + ', ' + pulse * 0.25 + ')');
-      ctx.fillStyle = ambGlow;
-      ctx.fillRect(dir === 1 ? edgeX - 50 : 0, zd.y - 10, dir === 1 ? CW - edgeX + 50 : edgeX + 50, zd.h + 20);
-
-      // Portal-style swirling vortex energy field
-      var fieldX = dir === 1 ? edgeX - 8 : edgeX + 8;
-      var vortexCY = zd.y + zd.h / 2;
-      for (var ey = 0; ey < zd.h; ey += 3) {
-        var fy = zd.y + ey;
-        var distFromCenter = Math.abs(fy - vortexCY) / (zd.h / 2);
-        var vortexIntensity = 1 - distFromCenter * 0.6;
-        var wave = Math.sin(waveT * 1.5 + ey * 0.06) * (8 * vortexIntensity);
-        var wave3 = Math.cos(waveT * 2 + ey * 0.09) * (5 * vortexIntensity);
-        var eAlpha = (0.15 + 0.15 * Math.sin(waveT * 2 + ey * 0.1)) * vortexIntensity;
-        ctx.fillStyle = 'rgba(' + zoneSecR + ', ' + eAlpha + ')';
-        ctx.fillRect(fieldX + wave * dir * -1, fy, 3, 3);
-        // Second swirl layer
-        ctx.fillStyle = 'rgba(' + zoneMainR + ', ' + (eAlpha * 0.7) + ')';
-        ctx.fillRect(fieldX + wave3 * dir * -1 - dir * 8, fy + 1, 2, 2);
-        // Third bright inner swirl
-        if (ey % 6 === 0) {
-          ctx.fillStyle = 'rgba(' + zoneHighR + ', ' + (eAlpha * 0.4) + ')';
-          var wave4 = Math.sin(waveT * 3 + ey * 0.12) * (3 * vortexIntensity);
-          ctx.fillRect(fieldX + wave4 * dir * -1 - dir * 3, fy, 2, 2);
-        }
-      }
-
-      // Pulsing rings of light emanating outward
-      for (var ri = 0; ri < 3; ri++) {
-        var ringPhase = ((now * 0.002 + ri * 1.0) % 3) / 3;
-        var ringRadius = 8 + ringPhase * 35;
-        var ringAlpha = (1 - ringPhase) * 0.25 * pulse;
-        ctx.globalAlpha = ringAlpha;
-        ctx.strokeStyle = 'rgba(' + zoneHighR + ', 1)';
-        ctx.lineWidth = 1.5 * (1 - ringPhase);
-        ctx.beginPath();
-        ctx.arc(edgeX + dir * (-15), vortexCY, ringRadius,
-          dir === 1 ? -Math.PI * 0.4 : Math.PI * 0.6,
-          dir === 1 ? Math.PI * 0.4 : Math.PI * 1.4);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1.0;
-
-      // Solid bar with gradient
-      var barGrad = ctx.createLinearGradient(zx, zd.y, zx, zd.y + zd.h);
-      barGrad.addColorStop(0, 'rgba(' + zoneMainR + ', ' + pulse * 0.3 + ')');
-      barGrad.addColorStop(0.3, 'rgba(' + zoneSecR + ', ' + pulse + ')');
-      barGrad.addColorStop(0.5, 'rgba(' + zoneHighR + ', ' + pulse + ')');
-      barGrad.addColorStop(0.7, 'rgba(' + zoneSecR + ', ' + pulse + ')');
-      barGrad.addColorStop(1, 'rgba(' + zoneMainR + ', ' + pulse * 0.3 + ')');
-      ctx.fillStyle = barGrad;
+      // Solid bar fill
+      ctx.fillStyle = 'rgba(' + zoneMainR + ', ' + pulse + ')';
       ctx.fillRect(zx, zd.y, wallW, zd.h);
 
-      // Inner glow edge line
-      ctx.shadowColor = zoneGlowHex;
-      ctx.shadowBlur = GLOW_MD;
+      // Edge line
       ctx.strokeStyle = 'rgba(' + zoneHighR + ', ' + (0.5 + pulse * 0.5) + ')';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(edgeX, zd.y);
       ctx.lineTo(edgeX, zd.y + zd.h);
       ctx.stroke();
-      ctx.shadowBlur = 0;
 
-      // Top and bottom corner arcs
-      ctx.strokeStyle = 'rgba(' + zoneSecR + ', ' + pulse * 0.6 + ')';
-      ctx.lineWidth = 2;
-      // Top corner
-      ctx.beginPath();
-      if (dir === 1) {
-        ctx.arc(edgeX, zd.y, 12, -Math.PI * 0.5, 0);
-      } else {
-        ctx.arc(edgeX, zd.y, 12, -Math.PI, -Math.PI * 0.5);
-      }
-      ctx.stroke();
-      // Bottom corner
-      ctx.beginPath();
-      if (dir === 1) {
-        ctx.arc(edgeX, zd.y + zd.h, 12, 0, Math.PI * 0.5);
-      } else {
-        ctx.arc(edgeX, zd.y + zd.h, 12, Math.PI * 0.5, Math.PI);
-      }
-      ctx.stroke();
-
-      // Animated chevron arrows with neon glow trail
+      // Simple chevron arrows (2 instead of 4, no glow)
       ctx.lineCap = 'round';
-      for (var ci = 0; ci < 4; ci++) {
-        var chevX = edgeX + dir * (-28 + ci * 7 + chevOffset * 0.4 * dir * -1);
-        var chevAlpha = 0.25 + 0.55 * Math.sin(now * 0.005 + ci * 0.7);
+      for (var ci = 0; ci < 2; ci++) {
+        var chevX = edgeX + dir * (-20 + ci * 8);
+        var chevAlpha = 0.4 + 0.4 * Math.sin(now * 0.005 + ci * 1.2);
         ctx.globalAlpha = chevAlpha;
-        // Neon glow layer (behind)
-        ctx.shadowColor = ci < 2 ? zoneChevHigh : zoneChevLow;
-        ctx.shadowBlur = ci === 0 ? 10 : 6;
-        ctx.strokeStyle = ci < 2 ? zoneChevHigh : zoneChevLow;
-        ctx.lineWidth = ci === 0 ? 3.5 : 2.5;
+        ctx.strokeStyle = zoneChevHigh;
+        ctx.lineWidth = 2.5;
         for (var ccy = zd.y + 15; ccy < zd.y + zd.h - 15; ccy += 25) {
           ctx.beginPath();
           ctx.moveTo(chevX - dir * 5, ccy - 6);
@@ -4270,62 +3795,7 @@ function loop(now) {
           ctx.lineTo(chevX - dir * 5, ccy + 6);
           ctx.stroke();
         }
-        ctx.shadowBlur = 0;
-        // Bright inner core (on top)
-        if (ci < 2) {
-          ctx.globalAlpha = chevAlpha * 0.7;
-          ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-          ctx.lineWidth = 1;
-          for (var ccy = zd.y + 15; ccy < zd.y + zd.h - 15; ccy += 25) {
-            ctx.beginPath();
-            ctx.moveTo(chevX - dir * 5, ccy - 6);
-            ctx.lineTo(chevX + dir * 4, ccy);
-            ctx.lineTo(chevX - dir * 5, ccy + 6);
-            ctx.stroke();
-          }
-        }
       }
-      ctx.globalAlpha = 1.0;
-
-      // Orbiting light motes / fireflies around the zone
-      for (var si = 0; si < 8; si++) {
-        var motePhase = now * 0.002 + si * 0.785;
-        var moteOrbitR = 12 + si * 3 + Math.sin(now * 0.001 + si) * 4;
-        var moteBaseY = zd.y + ((si * zd.h / 8 + now * 0.02) % zd.h);
-        var moteX = edgeX + dir * (-moteOrbitR * Math.cos(motePhase));
-        var moteY = moteBaseY + Math.sin(motePhase * 1.3 + si) * 8;
-        var moteAlpha = 0.3 + 0.7 * Math.abs(Math.sin(now * 0.005 + si * 1.3));
-        var moteSize = 1.5 + Math.sin(now * 0.008 + si * 2) * 0.8;
-        // Outer glow halo
-        ctx.shadowColor = zoneGlowHex;
-        ctx.shadowBlur = 12;
-        ctx.fillStyle = 'rgba(' + zoneHighR + ', ' + moteAlpha * 0.4 + ')';
-        ctx.beginPath();
-        ctx.arc(moteX, moteY, moteSize + 3, 0, Math.PI * 2);
-        ctx.fill();
-        // Inner glow
-        ctx.fillStyle = 'rgba(' + zoneHighR + ', ' + moteAlpha * 0.7 + ')';
-        ctx.beginPath();
-        ctx.arc(moteX, moteY, moteSize + 1, 0, Math.PI * 2);
-        ctx.fill();
-        // Bright white center
-        ctx.fillStyle = 'rgba(255, 255, 255, ' + moteAlpha * 0.9 + ')';
-        ctx.beginPath();
-        ctx.arc(moteX, moteY, moteSize * 0.6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-      }
-
-      // Scanning beam (horizontal line sweeping up and down)
-      var scanT = ((now * 0.001) % 2);
-      var scanY = scanT < 1 ? zd.y + scanT * zd.h : zd.y + (2 - scanT) * zd.h;
-      ctx.globalAlpha = 0.3 * pulse2;
-      ctx.strokeStyle = zoneChevHigh;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(dir === 1 ? edgeX - 35 : edgeX, scanY);
-      ctx.lineTo(dir === 1 ? edgeX + wallW : edgeX + 35, scanY);
-      ctx.stroke();
       ctx.globalAlpha = 1.0;
 
       // Item 24: High-contrast pattern overlay for safe zones
@@ -4333,7 +3803,6 @@ function loop(now) {
         ctx.globalAlpha = 0.5;
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 1;
-        // Diagonal stripe pattern
         for (var hsy = zd.y; hsy < zd.y + zd.h; hsy += 8) {
           ctx.beginPath();
           ctx.moveTo(zx, hsy);
@@ -4347,14 +3816,11 @@ function loop(now) {
       ctx.save();
       ctx.translate(edgeX + dir * (-40), zd.y + zd.h / 2);
       ctx.rotate(dir === 1 ? -Math.PI / 2 : Math.PI / 2);
-      ctx.shadowColor = zoneGlowHex;
-      ctx.shadowBlur = GLOW_SM;
       ctx.fillStyle = zoneChevHigh;
       ctx.font = 'bold 11px sans-serif';
       ctx.textAlign = 'center';
       ctx.globalAlpha = 0.9;
       ctx.fillText('SAFE ZONE', 0, 0);
-      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1.0;
       ctx.restore();
 
@@ -4376,16 +3842,12 @@ function loop(now) {
       var gzAlpha = Math.min(1, goldenZone.timer / 1000); // fade out in last second
       ctx.save();
       ctx.globalAlpha = gzAlpha;
-      // Golden glow
-      var gzGrad = ctx.createLinearGradient(gzX, goldenZone.y, gzX, goldenZone.y + goldenZone.h);
-      gzGrad.addColorStop(0, 'rgba(251,191,36,' + (gzPulse * 0.2) + ')');
-      gzGrad.addColorStop(0.5, 'rgba(255,215,0,' + (gzPulse * 0.6) + ')');
-      gzGrad.addColorStop(1, 'rgba(251,191,36,' + (gzPulse * 0.2) + ')');
-      ctx.fillStyle = gzGrad;
+      // Golden glow — flat fill
+      ctx.fillStyle = 'rgba(255,215,0,' + (gzPulse * 0.4) + ')';
       ctx.fillRect(gzX, goldenZone.y, wallW, goldenZone.h);
       // Border glow
       ctx.shadowColor = '#ffd700';
-      ctx.shadowBlur = 15;
+      ctx.shadowBlur = 0;
       ctx.strokeStyle = 'rgba(255,215,0,' + (0.6 + gzPulse * 0.4) + ')';
       ctx.lineWidth = 2;
       var gzEdge = goldenZone.side === 'right' ? CW - wallW : wallW;
@@ -4450,27 +3912,19 @@ function loop(now) {
     for (var ppi2 = 0; ppi2 < portalPairs.length; ppi2++) {
       var pp2 = portalPairs[ppi2];
       var ppPulse = 0.6 + 0.4 * Math.sin(now * 0.006 + ppi2);
-      // Entry portal (blue)
+      // Entry portal (blue) — simplified
       ctx.save();
-      ctx.globalAlpha = 0.6;
-      var entryGrad = ctx.createRadialGradient(pp2.entry.x, pp2.entry.y, 2, pp2.entry.x, pp2.entry.y, 22);
-      entryGrad.addColorStop(0, 'rgba(96,165,250,0.8)');
-      entryGrad.addColorStop(0.5, 'rgba(96,165,250,0.3)');
-      entryGrad.addColorStop(1, 'rgba(96,165,250,0)');
-      ctx.fillStyle = entryGrad;
-      ctx.beginPath(); ctx.arc(pp2.entry.x, pp2.entry.y, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = 'rgba(96,165,250,0.4)';
+      ctx.beginPath(); ctx.arc(pp2.entry.x, pp2.entry.y, 18, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#60a5fa';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(pp2.entry.x, pp2.entry.y, 18 + ppPulse * 3, now * 0.003, now * 0.003 + Math.PI * 1.5);
       ctx.stroke();
-      // Exit portal (orange)
-      var exitGrad = ctx.createRadialGradient(pp2.exit.x, pp2.exit.y, 2, pp2.exit.x, pp2.exit.y, 22);
-      exitGrad.addColorStop(0, 'rgba(251,146,60,0.8)');
-      exitGrad.addColorStop(0.5, 'rgba(251,146,60,0.3)');
-      exitGrad.addColorStop(1, 'rgba(251,146,60,0)');
-      ctx.fillStyle = exitGrad;
-      ctx.beginPath(); ctx.arc(pp2.exit.x, pp2.exit.y, 22, 0, Math.PI * 2); ctx.fill();
+      // Exit portal (orange) — simplified
+      ctx.fillStyle = 'rgba(251,146,60,0.4)';
+      ctx.beginPath(); ctx.arc(pp2.exit.x, pp2.exit.y, 18, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#fb923c';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -4532,25 +3986,13 @@ function loop(now) {
         ctx.lineTo(L.x2, L.y2);
         ctx.stroke();
       }
-      // Outer glow
-      ctx.shadowColor = lc.main;
-      ctx.shadowBlur = 15 * lineFade;
-      ctx.globalAlpha = 0.4 * lineFade;
-      ctx.strokeStyle = lc.glow;
-      ctx.lineWidth = lineThickness + 6;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(L.x1, L.y1);
-      ctx.lineTo(L.x2, L.y2);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
       // Main line
       ctx.globalAlpha = lineFade;
       ctx.strokeStyle = lc.main;
       ctx.lineWidth = lineThickness;
+      ctx.lineCap = 'round';
       ctx.beginPath();
       if (activeLineType === 'curvedLines') {
-        // Curved line visual (item 6)
         var midX = (L.x1 + L.x2) / 2;
         var midY = (L.y1 + L.y2) / 2 - 15;
         ctx.moveTo(L.x1, L.y1);
@@ -4584,21 +4026,10 @@ function loop(now) {
           }
         }
       }
-      // Sticky line drip visual (item 6)
-      if (activeLineType === 'stickyLines' && frameCount % 10 === 0) {
-        var slt = Math.random();
-        var slx = L.x1 + (L.x2 - L.x1) * slt;
-        var sly = L.y1 + (L.y2 - L.y1) * slt;
-        particles.push({
-          x: slx, y: sly, vx: 0, vy: 0.5 + Math.random() * 0.5,
-          life: 0.4, color: 'rgba(100,220,100,0.5)', size: 2 + Math.random() * 2,
-          shape: 'circle', rot: 0, rotSpeed: 0
-        });
-      }
-      // Inner highlight — bright center core
-      ctx.globalAlpha = lineFade * 0.9;
+      // Inner highlight
+      ctx.globalAlpha = lineFade * 0.7;
       ctx.strokeStyle = lc.inner;
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       if (activeLineType === 'curvedLines') {
         var midX2 = (L.x1 + L.x2) / 2;
@@ -4610,65 +4041,6 @@ function loop(now) {
         ctx.lineTo(L.x2, L.y2);
       }
       ctx.stroke();
-      // White-hot center line for laser/energy beam look
-      ctx.globalAlpha = lineFade * 0.5;
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      if (activeLineType === 'curvedLines') {
-        var midX3 = (L.x1 + L.x2) / 2;
-        var midY3 = (L.y1 + L.y2) / 2 - 15;
-        ctx.moveTo(L.x1, L.y1);
-        ctx.quadraticCurveTo(midX3, midY3, L.x2, L.y2);
-      } else {
-        ctx.moveTo(L.x1, L.y1);
-        ctx.lineTo(L.x2, L.y2);
-      }
-      ctx.stroke();
-      // Animated energy flow — traveling dots/pulses along line
-      var lineDx = L.x2 - L.x1, lineDy = L.y2 - L.y1;
-      var lineLen = Math.sqrt(lineDx * lineDx + lineDy * lineDy);
-      if (lineLen > 20) {
-        var pulseCount = Math.max(2, Math.floor(lineLen / 40));
-        for (var pi2 = 0; pi2 < pulseCount; pi2++) {
-          var pulseT = ((now * 0.003 + pi2 / pulseCount) % 1);
-          var px2 = L.x1 + lineDx * pulseT;
-          var py2 = L.y1 + lineDy * pulseT;
-          if (activeLineType === 'curvedLines') {
-            var cm = 1 - pulseT;
-            var midXC = (L.x1 + L.x2) / 2;
-            var midYC = (L.y1 + L.y2) / 2 - 15;
-            px2 = cm * cm * L.x1 + 2 * cm * pulseT * midXC + pulseT * pulseT * L.x2;
-            py2 = cm * cm * L.y1 + 2 * cm * pulseT * midYC + pulseT * pulseT * L.y2;
-          }
-          var pulseBright = Math.sin(pulseT * Math.PI) * lineFade;
-          ctx.globalAlpha = pulseBright * 0.8;
-          ctx.fillStyle = '#fff';
-          ctx.shadowColor = lc.main;
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.arc(px2, py2, 2.5 + pulseBright, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-        }
-      }
-      // Sparkle particles along line
-      if (frameCount % 6 === 0) {
-        var lt = Math.random();
-        var lsx = L.x1 + (L.x2 - L.x1) * lt;
-        var lsy = L.y1 + (L.y2 - L.y1) * lt;
-        particles.push({
-          x: lsx, y: lsy,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: -0.8 - Math.random() * 0.5,
-          life: 0.5,
-          color: lc.inner,
-          size: 1.5 + Math.random() * 1.5,
-          shape: 'star',
-          rot: Math.random() * Math.PI * 2,
-          rotSpeed: (Math.random() - 0.5) * 0.1
-        });
-      }
       ctx.globalAlpha = 1.0;
     }
 
@@ -4705,26 +4077,15 @@ function loop(now) {
       ctx.restore();
     }
 
-    // Magnet effect visual (item 9)
+    // Magnet effect visual (item 9) — simplified flat tint
     if (activeEffects.magnet > 0) {
       var zR = getZone();
       var zL = getZoneLeft();
-      var magnetAlpha = 0.1 + 0.08 * Math.sin(now * 0.006);
-      // Right zone magnet field
-      ctx.save();
-      ctx.globalAlpha = magnetAlpha;
-      var mGradR = ctx.createRadialGradient(CW - WALL_W, zR.y + zR.h / 2, 10, CW - WALL_W, zR.y + zR.h / 2, 150);
-      mGradR.addColorStop(0, 'rgba(244,114,182,0.4)');
-      mGradR.addColorStop(1, 'rgba(244,114,182,0)');
-      ctx.fillStyle = mGradR;
-      ctx.fillRect(CW - WALL_W - 150, zR.y - 50, 200, zR.h + 100);
-      // Left zone magnet field
-      var mGradL = ctx.createRadialGradient(WALL_W, zL.y + zL.h / 2, 10, WALL_W, zL.y + zL.h / 2, 150);
-      mGradL.addColorStop(0, 'rgba(244,114,182,0.4)');
-      mGradL.addColorStop(1, 'rgba(244,114,182,0)');
-      ctx.fillStyle = mGradL;
-      ctx.fillRect(-50, zL.y - 50, WALL_W + 200, zL.h + 100);
-      ctx.restore();
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = 'rgba(244,114,182,0.3)';
+      ctx.fillRect(CW - WALL_W - 80, zR.y - 20, 100, zR.h + 40);
+      ctx.fillRect(-20, zL.y - 20, WALL_W + 100, zL.h + 40);
+      ctx.globalAlpha = 1.0;
     }
 
     // DROP SHADOWS on floor — dynamic based on height
@@ -4792,163 +4153,55 @@ function loop(now) {
       ctx.scale(obj.squashX || 1, obj.squashY || 1);
 
       if (obj.type === 'powerup') {
-        // Power-up orb — magical floating with internal swirling energy
-        var puPulse = 0.7 + 0.3 * Math.sin(now * 0.008);
-        var puBreath = 1 + 0.06 * Math.sin(now * 0.005); // gentle size breathing
+        // Power-up orb — simplified to colored circle + icon
         var puColor = obj.powerup === 'shield' ? '#60a5fa' : obj.powerup === 'magnet' ? '#f472b6' : obj.powerup === 'shrinkRay' ? '#c084fc' : '#fbbf24';
         var puColorDark = obj.powerup === 'shield' ? '#1e3a8a' : obj.powerup === 'magnet' ? '#831843' : obj.powerup === 'shrinkRay' ? '#4c1d95' : '#78350f';
 
-        // Outer pulsing glow that illuminates surroundings
-        ctx.save();
-        ctx.globalAlpha = puPulse * 0.15;
-        var puOuterGlow = ctx.createRadialGradient(0, 0, 8, 0, 0, 35);
-        puOuterGlow.addColorStop(0, puColor);
-        puOuterGlow.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = puOuterGlow;
+        // Main orb — simple filled circle
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = puColorDark;
         ctx.beginPath();
-        ctx.arc(0, 0, 35, 0, Math.PI * 2);
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
-
-        // Orbiting energy particles (6 motes)
-        for (var opi = 0; opi < 6; opi++) {
-          var opAngle = now * 0.006 + opi * Math.PI / 3;
-          var opR = 18 + Math.sin(now * 0.004 + opi * 1.5) * 3;
-          var opx = Math.cos(opAngle) * opR;
-          var opy = Math.sin(opAngle) * opR * 0.7;
-          var opBright = 0.3 + 0.5 * Math.sin(now * 0.01 + opi * 2);
-          ctx.globalAlpha = opBright;
-          ctx.fillStyle = puColor;
-          ctx.shadowColor = puColor;
-          ctx.shadowBlur = 6;
-          ctx.beginPath();
-          ctx.arc(opx, opy, 1.5, 0, Math.PI * 2);
-          ctx.fill();
-          // Tiny trail
-          var opxT = Math.cos(opAngle - 0.4) * opR;
-          var opyT = Math.sin(opAngle - 0.4) * opR * 0.7;
-          ctx.globalAlpha = opBright * 0.3;
-          ctx.beginPath();
-          ctx.arc(opxT, opyT, 0.8, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.shadowBlur = 0;
-
-        // Main orb with deep multi-stop gradient
-        ctx.globalAlpha = puPulse;
-        ctx.shadowColor = puColor;
-        ctx.shadowBlur = 18 + 6 * Math.sin(now * 0.006);
-        var puR = 14 * puBreath;
-        var puGrad = ctx.createRadialGradient(-3, -4, 1, 0, 0, puR);
-        puGrad.addColorStop(0, '#ffffff');
-        puGrad.addColorStop(0.2, puColor);
-        puGrad.addColorStop(0.65, puColor);
-        puGrad.addColorStop(1, puColorDark);
+        ctx.fillStyle = puColor;
         ctx.beginPath();
-        ctx.arc(0, 0, puR, 0, Math.PI * 2);
-        ctx.fillStyle = puGrad;
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
-        // Internal swirling energy — two curved arcs
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(0, 0, puR, 0, Math.PI * 2);
-        ctx.clip();
-        for (var swi = 0; swi < 2; swi++) {
-          var swAngle = now * 0.004 + swi * Math.PI;
-          ctx.globalAlpha = 0.2 + 0.1 * Math.sin(now * 0.008 + swi);
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          var sx1 = Math.cos(swAngle) * 10;
-          var sy1 = Math.sin(swAngle) * 10;
-          var sx2 = Math.cos(swAngle + Math.PI) * 10;
-          var sy2 = Math.sin(swAngle + Math.PI) * 10;
-          var cpx = Math.cos(swAngle + Math.PI / 2) * 6;
-          var cpy = Math.sin(swAngle + Math.PI / 2) * 6;
-          ctx.moveTo(sx1, sy1);
-          ctx.quadraticCurveTo(cpx, cpy, sx2, sy2);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // Glass-like specular highlight
-        ctx.globalAlpha = 0.6;
+        // Specular highlight
+        ctx.globalAlpha = 0.5;
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.ellipse(-4, -5, 4, 2.5, -0.4, 0, Math.PI * 2);
         ctx.fill();
-        // Secondary highlight
-        ctx.globalAlpha = 0.25;
-        ctx.beginPath();
-        ctx.ellipse(3, -3, 2, 1.2, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Rim light
-        ctx.globalAlpha = puPulse * 0.3;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 0.8;
-        ctx.beginPath();
-        ctx.arc(0, 0, puR - 0.5, -0.8, 0.8);
-        ctx.stroke();
 
         ctx.globalAlpha = 1;
         // Icon
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 14px sans-serif';
         ctx.textAlign = 'center';
-        ctx.shadowColor = puColor;
-        ctx.shadowBlur = 4;
         if (obj.powerup === 'shield') ctx.fillText('\u25C8', 0, 5);
         else if (obj.powerup === 'magnet') ctx.fillText('M', 0, 5);
         else if (obj.powerup === 'shrinkRay') ctx.fillText('\u2B07', 0, 5);
         else ctx.fillText('x2', 0, 5);
-        ctx.shadowBlur = 0;
       } else if (obj.type === 'egg') {
-        // Golden egg glow — rich metallic aura
+        // Golden egg — removed orbiting sparkles for performance
         if (obj.golden) {
-          ctx.shadowColor = '#fbbf24';
-          ctx.shadowBlur = 18 + 8 * Math.sin(now * 0.006);
-          // Orbiting sparkles with trails
-          for (var gs = 0; gs < 6; gs++) {
-            var gAngle = now * 0.004 + gs * Math.PI / 3;
-            var gOrbitR = 18 + Math.sin(now * 0.003 + gs) * 4;
-            var gx = Math.cos(gAngle) * gOrbitR;
-            var gy = Math.sin(gAngle) * (gOrbitR + 4);
-            var gBright = 0.4 + 0.4 * Math.sin(now * 0.008 + gs);
-            // Trail
-            var gxPrev = Math.cos(gAngle - 0.3) * gOrbitR;
-            var gyPrev = Math.sin(gAngle - 0.3) * (gOrbitR + 4);
-            ctx.strokeStyle = 'rgba(255, 220, 80, ' + gBright * 0.3 + ')';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath(); ctx.moveTo(gxPrev, gyPrev); ctx.lineTo(gx, gy); ctx.stroke();
-            ctx.fillStyle = 'rgba(255, 240, 150, ' + gBright + ')';
-            ctx.beginPath(); ctx.arc(gx, gy, 2, 0, Math.PI * 2); ctx.fill();
-          }
         }
         // Soft drop shadow underneath
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.beginPath();
         ctx.ellipse(2, 18, 10, 3.5, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Egg body — porcelain/ceramic multi-layer gradient
+        // Egg body — simplified gradient (3 stops)
         var eggGrad = ctx.createRadialGradient(-5, -7, 1, 2, 3, 20);
         if (obj.golden) {
-          // Metallic gold with rich sheen
-          eggGrad.addColorStop(0, '#fffef0');
-          eggGrad.addColorStop(0.15, '#ffe580');
-          eggGrad.addColorStop(0.35, '#ffc940');
-          eggGrad.addColorStop(0.55, '#e6a200');
-          eggGrad.addColorStop(0.75, '#c08000');
+          eggGrad.addColorStop(0, '#ffe580');
+          eggGrad.addColorStop(0.5, '#e6a200');
           eggGrad.addColorStop(1, '#7a4e00');
         } else {
-          // Porcelain: warm white to soft terracotta
-          eggGrad.addColorStop(0, '#fffff8');
-          eggGrad.addColorStop(0.15, '#fefaf0');
-          eggGrad.addColorStop(0.35, '#f8ecd0');
-          eggGrad.addColorStop(0.55, '#efd8b0');
-          eggGrad.addColorStop(0.75, '#dfc098');
+          eggGrad.addColorStop(0, '#fefaf0');
+          eggGrad.addColorStop(0.5, '#efd8b0');
           eggGrad.addColorStop(1, '#c4956a');
         }
         ctx.beginPath();
@@ -4959,54 +4212,23 @@ function loop(now) {
         ctx.strokeStyle = obj.golden ? 'rgba(120,80,0,0.6)' : 'rgba(160,120,80,0.4)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
-        // Specular highlight — bright shiny spot (key light)
+        // Specular highlight
         ctx.beginPath();
         ctx.ellipse(-4, -9, 3.5, 5, -0.3, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
         ctx.fill();
-        // Secondary specular (fill light)
-        ctx.beginPath();
-        ctx.ellipse(4, -10, 1.8, 2.5, 0.3, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.fill();
-        // Rim light along right edge
-        ctx.save();
-        ctx.globalAlpha = obj.golden ? 0.3 : 0.15;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 13, 17, 0, -0.6, 0.6);
-        ctx.strokeStyle = obj.golden ? '#ffe580' : '#fff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.restore();
-        // Subtle bottom shadow inside egg (ambient occlusion)
-        ctx.fillStyle = 'rgba(0,0,0,0.08)';
-        ctx.beginPath();
-        ctx.ellipse(0, 9, 9, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Golden egg metallic band reflection
-        if (obj.golden) {
-          ctx.globalAlpha = 0.15;
-          ctx.fillStyle = '#fff';
-          ctx.beginPath();
-          ctx.ellipse(0, -2, 11, 2, 0.1, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = 1;
-        }
-        // Blush marks with soft glow
+        // Blush marks
         ctx.fillStyle = 'rgba(255,130,130,0.2)';
         ctx.beginPath(); ctx.arc(-8, 2, 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(8, 2, 3.5, 0, Math.PI * 2); ctx.fill();
-        // Eyes with depth
+        // Eyes
         ctx.fillStyle = '#3a2818';
         ctx.beginPath(); ctx.arc(-4, -4, 2.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(4, -4, 2.5, 0, Math.PI * 2); ctx.fill();
-        // Eye highlights (two per eye for more life)
+        // Eye highlights (one per eye)
         ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.arc(-3, -5, 1.1, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(5, -5, 1.1, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.45)';
-        ctx.beginPath(); ctx.arc(-4.5, -3.5, 0.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(3.5, -3.5, 0.5, 0, Math.PI * 2); ctx.fill();
         // Smile with subtle wobble
         var smileWobble = Math.sin(now * 0.003) * 0.1;
         ctx.beginPath(); ctx.arc(0, 1, 4, 0.2 + smileWobble, Math.PI - 0.2 + smileWobble); ctx.strokeStyle = '#6b5030'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -5114,7 +4336,7 @@ function loop(now) {
 
         // === HEAT DISTORTION AURA (superheated air around rock) ===
         ctx.shadowColor = '#ff4400';
-        ctx.shadowBlur = 20 + mp * 12;
+        ctx.shadowBlur = 0;
         // Layered glow: white-hot center → orange → dark red edge
         var heatGrad = ctx.createRadialGradient(0, -1, 2, 0, 0, 22);
         heatGrad.addColorStop(0, 'rgba(255, 255, 220, 0.6)');
@@ -5188,7 +4410,7 @@ function loop(now) {
         // Main fissure
         ctx.strokeStyle = 'rgba(255, 180, 40, ' + crackGlow + ')';
         ctx.shadowColor = 'rgba(255, 140, 20, 0.6)';
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 0;
         ctx.beginPath();
         ctx.moveTo(-9, -3); ctx.lineTo(-5, 0); ctx.lineTo(-1, -2); ctx.lineTo(3, 1); ctx.lineTo(7, -1);
         ctx.stroke();
@@ -5229,197 +4451,56 @@ function loop(now) {
         ctx.arc(frontX, frontY, 10, 0, Math.PI * 2);
         ctx.fill();
       } else if (obj.type === 'bouncyBall') {
-        // Glass marble with internal swirls and realistic refraction
-        var bbPulse = 1 + 0.04 * Math.sin(now * 0.01);
-        ctx.save();
-        ctx.scale(bbPulse, bbPulse);
-        // Drop shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.12)';
-        ctx.beginPath();
-        ctx.ellipse(2, 15, 9, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Base glass sphere with deep color
-        var bbGrad = ctx.createRadialGradient(-4, -4, 1, 2, 2, 14);
-        bbGrad.addColorStop(0, 'rgba(255,245,220,0.9)');
-        bbGrad.addColorStop(0.2, 'rgba(240,180,60,0.8)');
-        bbGrad.addColorStop(0.5, 'rgba(200,120,20,0.7)');
-        bbGrad.addColorStop(0.8, 'rgba(120,60,10,0.85)');
-        bbGrad.addColorStop(1, 'rgba(60,25,5,0.9)');
+        // Glass marble — simplified
+        // Base sphere — flat amber
+        ctx.fillStyle = '#c87828';
         ctx.beginPath();
         ctx.arc(0, 0, 13, 0, Math.PI * 2);
-        ctx.fillStyle = bbGrad;
         ctx.fill();
-        // Internal swirl pattern 1 (red)
-        ctx.save();
-        ctx.clip();
-        ctx.globalAlpha = 0.45;
-        var swirl1Phase = now * 0.003;
-        ctx.strokeStyle = '#cc2222';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        for (var sw = 0; sw < 12; sw++) {
-          var swA = swirl1Phase + sw * 0.5;
-          var swR = sw * 1.1;
-          var swX = Math.cos(swA) * swR;
-          var swY = Math.sin(swA) * swR;
-          if (sw === 0) ctx.moveTo(swX, swY); else ctx.lineTo(swX, swY);
-        }
-        ctx.stroke();
-        // Internal swirl pattern 2 (blue)
-        ctx.strokeStyle = '#2244cc';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        for (var sw = 0; sw < 10; sw++) {
-          var swA = -swirl1Phase * 0.7 + sw * 0.6 + 2;
-          var swR = sw * 1.2;
-          var swX = Math.cos(swA) * swR + 1;
-          var swY = Math.sin(swA) * swR - 1;
-          if (sw === 0) ctx.moveTo(swX, swY); else ctx.lineTo(swX, swY);
-        }
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.restore();
-        // Glass edge highlight (thin bright rim)
-        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        // Edge highlight
+        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 0, 12.5, 0, Math.PI * 2);
         ctx.stroke();
-        // Rainbow refraction at edge
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        var rainbowEdge = ctx.createRadialGradient(0, 0, 10, 0, 0, 14);
-        rainbowEdge.addColorStop(0, 'rgba(255,0,0,0)');
-        rainbowEdge.addColorStop(0.3, 'rgba(255,0,0,0.3)');
-        rainbowEdge.addColorStop(0.5, 'rgba(0,255,0,0.2)');
-        rainbowEdge.addColorStop(0.7, 'rgba(0,100,255,0.3)');
-        rainbowEdge.addColorStop(1, 'rgba(100,0,255,0)');
-        ctx.fillStyle = rainbowEdge;
-        ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-        // Primary specular highlight (refraction spot)
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        // Specular highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
         ctx.beginPath();
         ctx.ellipse(-4, -5, 3, 4, -0.3, 0, Math.PI * 2);
         ctx.fill();
-        // Secondary highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(5, 4, 1.5, 2, 0.5, 0, Math.PI * 2);
-        ctx.fill();
-        // Crescent shadow at bottom for 3D depth
-        ctx.fillStyle = 'rgba(0,0,0,0.12)';
-        ctx.beginPath();
-        ctx.arc(0, 0, 13, 0.5, Math.PI - 0.5);
-        ctx.arc(0, 3, 10, Math.PI - 0.3, 0.3, true);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
       }
 
-      // Item 6: Wind-up object rendering — detailed toy appearance
+      // Item 6: Wind-up object rendering — simplified
       if (obj.isWindUp && obj.type === 'windUp') {
-        // Shadow under toy
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.beginPath();
-        ctx.ellipse(1, 17, 9, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
-        // Toy body with painted look and wear texture
-        var wuGrad = ctx.createRadialGradient(-3, -3, 1, 1, 2, 14);
-        wuGrad.addColorStop(0, '#ffe680');
-        wuGrad.addColorStop(0.25, '#ffc940');
-        wuGrad.addColorStop(0.55, '#e8a020');
-        wuGrad.addColorStop(0.8, '#b47010');
-        wuGrad.addColorStop(1, '#8a5008');
+        // Toy body — flat color
+        ctx.fillStyle = '#e8a020';
         ctx.beginPath();
         ctx.arc(0, 2, 12, 0, Math.PI * 2);
-        ctx.fillStyle = wuGrad;
         ctx.fill();
-        // Paint wear marks — subtle scratches
-        ctx.save();
-        ctx.globalAlpha = 0.1;
-        ctx.strokeStyle = '#6a4510';
-        ctx.lineWidth = 0.5;
-        ctx.beginPath(); ctx.moveTo(-6, -2); ctx.lineTo(-3, 3); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(4, -4); ctx.lineTo(6, 1); ctx.stroke();
-        ctx.restore();
         // Outline
         ctx.strokeStyle = 'rgba(100,60,10,0.5)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 2, 12, 0, Math.PI * 2);
         ctx.stroke();
-        // Feet — rounded with depth
-        var footGrad = ctx.createLinearGradient(0, 12, 0, 16);
-        footGrad.addColorStop(0, '#ef4444');
-        footGrad.addColorStop(1, '#991b1b');
-        ctx.fillStyle = footGrad;
-        ctx.beginPath();
-        ctx.roundRect(-9, 12, 6, 5, 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.roundRect(3, 12, 6, 5, 2);
-        ctx.fill();
-        // Eyes — with cute reflections
+        // Feet — flat color
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-9, 12, 6, 5);
+        ctx.fillRect(3, 12, 6, 5);
+        // Eyes
         ctx.fillStyle = '#1a202e';
         ctx.beginPath(); ctx.arc(-4, -1, 2.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(4, -1, 2.5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.arc(-3.2, -2, 0.9, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(4.8, -2, 0.9, 0, Math.PI * 2); ctx.fill();
-        // Cheek circles
-        ctx.fillStyle = 'rgba(255,100,80,0.2)';
-        ctx.beginPath(); ctx.arc(-7, 3, 2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(7, 3, 2.5, 0, Math.PI * 2); ctx.fill();
-        // Metallic key on top — with shine and gear details
+        // Key on top — simplified flat rectangles
         ctx.save();
         ctx.translate(0, -12);
         ctx.rotate(now * 0.01);
-        // Key shaft — metallic gradient
-        var keyGrad = ctx.createLinearGradient(-2, -8, 2, 0);
-        keyGrad.addColorStop(0, '#d4dbe4');
-        keyGrad.addColorStop(0.3, '#a0aec0');
-        keyGrad.addColorStop(0.5, '#c8d0dc');
-        keyGrad.addColorStop(0.7, '#8898a8');
-        keyGrad.addColorStop(1, '#6b7a8a');
-        ctx.fillStyle = keyGrad;
+        ctx.fillStyle = '#a0aec0';
         ctx.fillRect(-2, -9, 4, 9);
-        // Key handle — T-shaped with metallic look
-        var handleGrad = ctx.createLinearGradient(-5, -10, 5, -7);
-        handleGrad.addColorStop(0, '#c0c8d4');
-        handleGrad.addColorStop(0.3, '#e0e4ea');
-        handleGrad.addColorStop(0.5, '#a0aab8');
-        handleGrad.addColorStop(1, '#7888a0');
-        ctx.fillStyle = handleGrad;
         ctx.fillRect(-5, -10, 10, 3.5);
-        // Key shine highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.fillRect(-4, -10, 3, 1.5);
-        ctx.fillRect(-1, -9, 2, 5);
-        // Key outline
-        ctx.strokeStyle = 'rgba(80,90,110,0.4)';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(-5, -10, 10, 3.5);
-        ctx.strokeRect(-2, -9, 4, 9);
-        ctx.restore();
-        // Gear detail on body — tiny visible cog
-        ctx.save();
-        ctx.translate(6, 6);
-        ctx.rotate(now * 0.008);
-        ctx.strokeStyle = 'rgba(100,80,40,0.25)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (var gi = 0; gi < 6; gi++) {
-          var ga = gi * Math.PI / 3;
-          ctx.moveTo(Math.cos(ga) * 2, Math.sin(ga) * 2);
-          ctx.lineTo(Math.cos(ga) * 4, Math.sin(ga) * 4);
-        }
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
-        ctx.stroke();
         ctx.restore();
         // Specular highlight on body
         ctx.fillStyle = 'rgba(255,255,255,0.35)';
@@ -5433,9 +4514,7 @@ function loop(now) {
         ctx.beginPath();
         ctx.ellipse(0, 0, 13, 17, 0, 0, Math.PI * 2);
         var decoyGrad = ctx.createRadialGradient(-4, -6, 2, 0, 0, 18);
-        decoyGrad.addColorStop(0, '#fffef5');
-        decoyGrad.addColorStop(0.3, '#fef3c7');
-        decoyGrad.addColorStop(0.7, '#f5deb3');
+        decoyGrad.addColorStop(0, '#fef3c7');
         decoyGrad.addColorStop(1, '#d4a574');
         ctx.fillStyle = decoyGrad;
         ctx.fill();
@@ -5528,7 +4607,7 @@ function loop(now) {
         } else if (activeEggSkin === 'neon') {
           // Bright green glow
           ctx.shadowColor = '#22c55e';
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 0;
           ctx.globalAlpha = 0.25;
           ctx.fillStyle = '#22c55e';
           ctx.beginPath();
@@ -5567,92 +4646,33 @@ function loop(now) {
       ctx.restore();
     }
 
-    // BOUNCE FLASHES — with bloom and starburst
+    // BOUNCE FLASHES — simplified to single circle
     for (var i = 0; i < flashes.length; i++) {
       var fl = flashes[i];
       var flR = fl.size * fl.life;
-      // Outer bloom halo
-      ctx.globalAlpha = fl.life * 0.2;
-      var flBloom = ctx.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, flR * 2);
-      flBloom.addColorStop(0, 'rgba(167,139,250,0.3)');
-      flBloom.addColorStop(0.5, 'rgba(167,139,250,0.08)');
-      flBloom.addColorStop(1, 'rgba(167,139,250,0)');
-      ctx.fillStyle = flBloom;
-      ctx.beginPath();
-      ctx.arc(fl.x, fl.y, flR * 2, 0, Math.PI * 2);
-      ctx.fill();
-      // Main flash
-      ctx.globalAlpha = fl.life * 0.7;
-      var flGrad = ctx.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, flR);
-      flGrad.addColorStop(0, 'rgba(255,255,255,0.9)');
-      flGrad.addColorStop(0.3, 'rgba(200,180,255,0.5)');
-      flGrad.addColorStop(0.6, 'rgba(167,139,250,0.2)');
-      flGrad.addColorStop(1, 'rgba(167,139,250,0)');
-      ctx.fillStyle = flGrad;
+      ctx.globalAlpha = fl.life * 0.5;
+      ctx.fillStyle = 'rgba(200,180,255,0.6)';
       ctx.beginPath();
       ctx.arc(fl.x, fl.y, flR, 0, Math.PI * 2);
       ctx.fill();
-      // Starburst cross rays
-      if (fl.life > 0.5) {
-        ctx.globalAlpha = (fl.life - 0.5) * 1.0;
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 1.5;
-        var rayLen = flR * 1.5;
-        ctx.beginPath();
-        ctx.moveTo(fl.x - rayLen, fl.y);
-        ctx.lineTo(fl.x + rayLen, fl.y);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(fl.x, fl.y - rayLen);
-        ctx.lineTo(fl.x, fl.y + rayLen);
-        ctx.stroke();
-      }
     }
     ctx.globalAlpha = 1.0;
 
-    // PARTICLES - with glow halos, color transitions, sparkle/twinkle
+    // PARTICLES — simplified (no glow halos, no per-particle gradients, no twinkle)
     for (var i = 0; i < particles.length; i++) {
       var p = particles[i];
       var pAlpha = Math.max(0, p.life);
-      // Apply easing to particle alpha
-      if (p.easingType === 1) pAlpha = Math.pow(pAlpha, 0.5); // easeOut - stays visible longer
-      else if (p.easingType === 2) pAlpha = Math.pow(pAlpha, 2); // easeIn - fades quickly
+      if (p.easingType === 1) pAlpha = Math.pow(pAlpha, 0.5);
+      else if (p.easingType === 2) pAlpha = Math.pow(pAlpha, 2);
       var ps = Math.max(0.5, p.size * p.life);
 
-      // Color transition — shift hue toward white/warm as particle fades
-      var baseColor = p.color;
-      // Parse hex or use as-is for rgba
-      var fadeShift = 1 - p.life; // 0 at birth, 1 at death
-      var shiftedColor = baseColor;
-      if (baseColor && baseColor[0] === '#' && baseColor.length >= 7) {
-        var cr = parseInt(baseColor.slice(1, 3), 16);
-        var cg = parseInt(baseColor.slice(3, 5), 16);
-        var cb = parseInt(baseColor.slice(5, 7), 16);
-        // Shift toward warm white as particle fades
-        cr = Math.min(255, cr + Math.floor(fadeShift * (255 - cr) * 0.4));
-        cg = Math.min(255, cg + Math.floor(fadeShift * (240 - cg) * 0.3));
-        cb = Math.max(0, cb - Math.floor(fadeShift * cb * 0.2));
-        shiftedColor = 'rgb(' + cr + ',' + cg + ',' + cb + ')';
-      }
-
-      ctx.save();
-      ctx.translate(p.x, p.y);
-      if (p.rot !== undefined) ctx.rotate(p.rot);
-
-      // Soft glow halo behind particle
-      ctx.globalAlpha = pAlpha * 0.25;
-      ctx.shadowColor = shiftedColor;
-      ctx.shadowBlur = ps * 2.5;
-      ctx.fillStyle = shiftedColor;
-      ctx.beginPath();
-      ctx.arc(0, 0, ps * 1.8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-
-      // Main particle shape
       ctx.globalAlpha = pAlpha;
-      ctx.fillStyle = shiftedColor;
+      ctx.fillStyle = p.color || '#fff';
+
       if (p.shape === 'star') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.rot !== undefined) ctx.rotate(p.rot);
         ctx.beginPath();
         ctx.moveTo(0, -ps);
         ctx.lineTo(ps * 0.3, -ps * 0.3);
@@ -5664,103 +4684,43 @@ function loop(now) {
         ctx.lineTo(-ps * 0.3, -ps * 0.3);
         ctx.closePath();
         ctx.fill();
-        // White-hot core on star particles
-        ctx.globalAlpha = pAlpha * 0.6;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(0, 0, ps * 0.3, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.restore();
       } else if (p.shape === 'square') {
-        ctx.fillRect(-ps / 2, -ps / 2, ps, ps);
-        // Bright edge highlight
-        ctx.globalAlpha = pAlpha * 0.4;
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 0.5;
-        ctx.strokeRect(-ps / 2, -ps / 2, ps, ps);
+        ctx.fillRect(p.x - ps / 2, p.y - ps / 2, ps, ps);
       } else if (p.shape === 'triangle') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (p.rot !== undefined) ctx.rotate(p.rot);
         ctx.beginPath();
         ctx.moveTo(0, -ps);
         ctx.lineTo(ps * 0.87, ps * 0.5);
         ctx.lineTo(-ps * 0.87, ps * 0.5);
         ctx.closePath();
         ctx.fill();
-        // Inner glow triangle
-        ctx.globalAlpha = pAlpha * 0.3;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.moveTo(0, -ps * 0.4);
-        ctx.lineTo(ps * 0.35, ps * 0.2);
-        ctx.lineTo(-ps * 0.35, ps * 0.2);
-        ctx.closePath();
-        ctx.fill();
+        ctx.restore();
       } else {
-        // Circle particle with radial glow
-        var pGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, ps);
-        pGrad.addColorStop(0, '#fff');
-        pGrad.addColorStop(0.3, shiftedColor);
-        pGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = pGrad;
+        // Circle — simple filled circle
         ctx.beginPath();
-        ctx.arc(0, 0, ps, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, ps, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Sparkle/twinkle cross effect — flicker based on time + particle index
-      var twinkle = Math.sin(now * 0.015 + i * 2.7) * 0.5 + 0.5;
-      if (twinkle > 0.6 && ps > 1.5) {
-        ctx.globalAlpha = pAlpha * (twinkle - 0.6) * 2.5;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 0.7;
-        var sparkLen = ps * 1.2;
-        // Vertical cross arm
-        ctx.beginPath();
-        ctx.moveTo(0, -sparkLen);
-        ctx.lineTo(0, sparkLen);
-        ctx.stroke();
-        // Horizontal cross arm
-        ctx.beginPath();
-        ctx.moveTo(-sparkLen, 0);
-        ctx.lineTo(sparkLen, 0);
-        ctx.stroke();
-      }
-
-      ctx.restore();
       if (p.rot !== undefined && p.rotSpeed !== undefined) {
         p.rot += p.rotSpeed;
       }
     }
     ctx.globalAlpha = 1.0;
 
-    // FLOATING TEXTS — with glow halo behind text and dramatic appearance
+    // FLOATING TEXTS — simplified (single draw)
     for (var i = 0; i < texts.length; i++) {
       var t = texts[i];
       var tAlpha = Math.max(0, t.life);
       var displaySize = Math.round(t.size * (t.scale || 1));
       ctx.font = 'bold ' + displaySize + 'px sans-serif';
       ctx.textAlign = 'center';
-
-      // Soft glow halo behind text
-      ctx.save();
-      ctx.globalAlpha = tAlpha * 0.3;
-      ctx.shadowColor = t.color;
-      ctx.shadowBlur = displaySize * 0.8;
-      ctx.fillStyle = t.color;
-      ctx.fillText(t.t, t.x, t.y);
-      ctx.restore();
-
-      // Main text with outer glow
       ctx.globalAlpha = tAlpha;
-      ctx.shadowColor = t.color;
-      ctx.shadowBlur = 8;
       ctx.fillStyle = t.color;
       ctx.fillText(t.t, t.x, t.y);
-      // White-hot center on large text (combo/bonus text)
-      if (displaySize >= 18) {
-        ctx.globalAlpha = tAlpha * 0.5;
-        ctx.fillStyle = '#fff';
-        ctx.fillText(t.t, t.x, t.y);
-      }
-      ctx.shadowBlur = 0;
       // Animate scale toward target
       if (t.scale && t.scale > t.targetScale) {
         t.scale += (t.targetScale - t.scale) * 0.15;
@@ -5793,7 +4753,7 @@ function loop(now) {
         ctx.scale(starProgress, starProgress);
         ctx.fillStyle = (i < showStars) ? '#fbbf24' : '#666';
         ctx.shadowColor = (i < showStars) ? '#fbbf24' : 'transparent';
-        ctx.shadowBlur = (i < showStars) ? 10 : 0;
+        ctx.shadowBlur = 0;
         ctx.fillText((i < showStars) ? '\u2605' : '\u2606', 0, 0);
         ctx.shadowBlur = 0;
         ctx.restore();
@@ -5806,7 +4766,7 @@ function loop(now) {
         ctx.fillStyle = '#fbbf24';
         ctx.textAlign = 'center';
         ctx.shadowColor = 'rgba(0,0,0,0.3)';
-        ctx.shadowBlur = 4;
+        ctx.shadowBlur = 0;
         ctx.fillText('+' + (showStars * 5) + ' star bonus!', CW / 2, CH / 2 + 95);
         ctx.shadowBlur = 0;
       }
@@ -5833,45 +4793,19 @@ function loop(now) {
       ctx.fillText('(?)', 70 + starTextWidth + 6, 68);
     }
 
-    // Ambient gameplay vignette — subtle darkened edges for focus
-    ctx.save();
-    ctx.globalAlpha = 0.25;
-    var ambVig = ctx.createRadialGradient(CW / 2, CH / 2, CH * 0.35, CW / 2, CH / 2, CH * 0.85);
-    ambVig.addColorStop(0, 'rgba(0,0,0,0)');
-    ambVig.addColorStop(0.7, 'rgba(0,0,0,0)');
-    ambVig.addColorStop(1, 'rgba(0,0,10,0.6)');
-    ctx.fillStyle = ambVig;
-    ctx.fillRect(0, 0, CW, CH);
-    ctx.restore();
+    // Ambient gameplay vignette removed for performance
 
-    // Level-up screen flash — dramatic golden light sweep
+    // Level-up screen flash — simplified to flat tint
     if (levelUpFlash > 0) {
       var flashProgress = levelUpFlash / 20;
-      // Golden radial burst from center
-      ctx.save();
-      ctx.globalAlpha = flashProgress * 0.35;
-      var flashGrad = ctx.createRadialGradient(CW / 2, CH / 2, 0, CW / 2, CH / 2, CH * (1.2 - flashProgress * 0.5));
-      flashGrad.addColorStop(0, 'rgba(255, 240, 180, 0.8)');
-      flashGrad.addColorStop(0.3, 'rgba(251, 191, 36, 0.5)');
-      flashGrad.addColorStop(0.7, 'rgba(251, 191, 36, 0.2)');
-      flashGrad.addColorStop(1, 'rgba(251, 191, 36, 0)');
-      ctx.fillStyle = flashGrad;
+      ctx.globalAlpha = flashProgress * 0.2;
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.5)';
       ctx.fillRect(0, 0, CW, CH);
-      // Horizontal light sweep line
-      var sweepY = CH * (1 - flashProgress);
-      ctx.globalAlpha = flashProgress * 0.6;
-      var sweepGrad = ctx.createLinearGradient(0, sweepY - 20, 0, sweepY + 20);
-      sweepGrad.addColorStop(0, 'rgba(255, 240, 180, 0)');
-      sweepGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
-      sweepGrad.addColorStop(1, 'rgba(255, 240, 180, 0)');
-      ctx.fillStyle = sweepGrad;
-      ctx.fillRect(0, sweepY - 20, CW, 40);
-      ctx.restore();
       levelUpFlash--;
       ctx.globalAlpha = 1.0;
     }
 
-    // Level-up banner — dramatic with glow and particle rays
+    // Level-up banner — simplified
     if (levelUpBanner > 0) {
       levelUpBanner--;
       var bannerAlpha = levelUpBanner < 20 ? levelUpBanner / 20 : Math.min(1, (120 - levelUpBanner) / 10);
@@ -5880,86 +4814,32 @@ function loop(now) {
       ctx.globalAlpha = bannerAlpha;
       ctx.translate(CW / 2, CH / 2 - 30);
       ctx.scale(bannerScale, bannerScale);
-
-      // Radiating light rays behind banner
-      ctx.save();
-      ctx.globalAlpha = bannerAlpha * 0.15;
-      for (var ri = 0; ri < 12; ri++) {
-        var rayAngle = ri * Math.PI / 6 + now * 0.001;
-        ctx.fillStyle = '#fbbf24';
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(rayAngle - 0.08) * 200, Math.sin(rayAngle - 0.08) * 200);
-        ctx.lineTo(Math.cos(rayAngle + 0.08) * 200, Math.sin(rayAngle + 0.08) * 200);
-        ctx.closePath();
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // Banner background with deeper gradient
-      var bannerBg = ctx.createLinearGradient(-120, -30, -120, 30);
-      bannerBg.addColorStop(0, 'rgba(20, 10, 0, 0.7)');
-      bannerBg.addColorStop(0.5, 'rgba(40, 20, 0, 0.6)');
-      bannerBg.addColorStop(1, 'rgba(20, 10, 0, 0.7)');
-      ctx.fillStyle = bannerBg;
+      // Banner background — flat
+      ctx.fillStyle = 'rgba(30, 15, 0, 0.7)';
       ctx.beginPath();
       ctx.roundRect(-130, -34, 260, 68, 18);
       ctx.fill();
-      // Gold border with double glow
-      ctx.shadowColor = '#fbbf24';
-      ctx.shadowBlur = 20;
+      // Gold border
       ctx.strokeStyle = '#fcd34d';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.roundRect(-128, -32, 256, 64, 16);
       ctx.stroke();
-      // Inner border
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(-124, -28, 248, 56, 14);
-      ctx.stroke();
-      // Text with glow
-      ctx.shadowColor = '#fbbf24';
-      ctx.shadowBlur = 15;
+      // Text
       ctx.fillStyle = '#fef3c7';
       ctx.font = 'bold 34px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('LEVEL ' + levelUpBannerLevel, 0, 12);
-      // White-hot center text
-      ctx.globalAlpha = bannerAlpha * 0.5;
-      ctx.fillStyle = '#fff';
-      ctx.fillText('LEVEL ' + levelUpBannerLevel, 0, 12);
-      ctx.shadowBlur = 0;
       ctx.restore();
     }
 
 
-    // Near-miss screen edge flash — dramatic yellow/orange flash from direction of miss
+    // Near-miss screen edge flash — simplified flat tint
     if (nearMissFlash > 0) {
-      ctx.save();
-      var nmAlpha = nearMissFlash / 15;
-      // Side flash — gradient from the edge closest to the miss
-      var nmSide = nearMissX < CW / 2 ? 'left' : 'right';
-      var nmGrad;
-      if (nmSide === 'left') {
-        nmGrad = ctx.createLinearGradient(0, 0, CW * 0.4, 0);
-      } else {
-        nmGrad = ctx.createLinearGradient(CW, 0, CW * 0.6, 0);
-      }
-      nmGrad.addColorStop(0, 'rgba(253, 224, 71, ' + (nmAlpha * 0.4) + ')');
-      nmGrad.addColorStop(0.3, 'rgba(251, 146, 60, ' + (nmAlpha * 0.2) + ')');
-      nmGrad.addColorStop(1, 'rgba(251, 146, 60, 0)');
-      ctx.fillStyle = nmGrad;
+      ctx.globalAlpha = (nearMissFlash / 15) * 0.15;
+      ctx.fillStyle = 'rgba(253, 224, 71, 0.5)';
       ctx.fillRect(0, 0, CW, CH);
-      // Bottom edge flash
-      var nmBotGrad = ctx.createLinearGradient(0, CH, 0, CH * 0.7);
-      nmBotGrad.addColorStop(0, 'rgba(253, 224, 71, ' + (nmAlpha * 0.35) + ')');
-      nmBotGrad.addColorStop(1, 'rgba(253, 224, 71, 0)');
-      ctx.fillStyle = nmBotGrad;
-      ctx.fillRect(0, CH * 0.7, CW, CH * 0.3);
-      ctx.restore();
+      ctx.globalAlpha = 1.0;
       nearMissFlash--;
     }
 
@@ -5998,7 +4878,7 @@ function loop(now) {
       ctx.font = 'bold 100px sans-serif';
       ctx.textAlign = 'center';
       ctx.shadowColor = countdownColor;
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = 0;
       ctx.fillText(countdownText, 0, 35);
       ctx.shadowBlur = 0;
       ctx.restore();
@@ -6018,7 +4898,7 @@ function loop(now) {
       ctx.strokeStyle = '#fbbf24';
       ctx.lineWidth = 2;
       ctx.shadowColor = '#fbbf24';
-      ctx.shadowBlur = GLOW_SM;
+      ctx.shadowBlur = 0;
       ctx.beginPath();
       ctx.roundRect(CW / 2 - 120, apY - 25, 240, 50, 14);
       ctx.stroke();
