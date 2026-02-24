@@ -3009,9 +3009,16 @@ function loop(now) {
       spawnTimer -= dt;
       if (spawnTimer <= 0 && spawnPauseTimer <= 0) {
         var activeCount = 0;
-        for (var i = 0; i < objects.length; i++) { if (objects[i].alive) activeCount++; }
+        var hasRecentSpawn = false;
+        for (var i = 0; i < objects.length; i++) {
+          if (objects[i].alive) {
+            activeCount++;
+            // Don't spawn if any object is still near the top (just spawned)
+            if (objects[i].y < 80) hasRecentSpawn = true;
+          }
+        }
         var maxObj = Math.min(2 + level, 12) + difficultyMultipliers[gameDifficulty].maxObjBonus;
-        if (activeCount < maxObj) spawnObj();
+        if (activeCount < maxObj && !hasRecentSpawn) spawnObj();
         var spawnInterval = Math.max(900, 3200 - level * 140);
         // Difficulty spawn rate
         spawnInterval /= difficultyMultipliers[gameDifficulty].spawnRate;
