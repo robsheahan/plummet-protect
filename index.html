@@ -2799,41 +2799,59 @@ function onCatch(obj) {
     levelBounces = 0;
     spawnPauseTimer = 2500; // 2.5 second breather before new objects spawn
     sfxLevelUpBig();
-    // Level-up fanfare — EXCITING
-    levelUpFlash = 30; // longer flash
-    levelUpBanner = 150; // longer banner
+    // Celebration scales with level — gets bigger every level!
+    var celebScale = Math.min(3, 1 + (level - 1) * 0.15); // 1x at level 1, up to 3x at level 14+
+    levelUpFlash = Math.floor(30 * celebScale);
+    levelUpBanner = Math.floor(150 * celebScale);
     levelUpBannerLevel = level;
-    shakeAmount = 20; // strong screen shake
-    // Level transition — no black screen, just keep playing
+    shakeAmount = Math.floor(20 * celebScale);
     // Encouraging message between levels
     levelMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
-    levelMessageTimer = 120; // display for ~2 seconds
-    // Camera zoom on level transition (item 19)
-    cameraZoomTarget = 1.08;
-    cameraZoomTimer = 1200;
+    levelMessageTimer = Math.floor(120 * celebScale);
+    // Camera zoom scales with level
+    cameraZoomTarget = 1.08 + (celebScale - 1) * 0.04; // up to 1.16 at high levels
+    cameraZoomTimer = Math.floor(1200 * celebScale);
     // Milestone check (item 14)
     checkMilestones();
-    // Shockwave from center
-    shockwaves.push({ x: CW / 2, y: CH / 2, radius: 10, maxRadius: Math.max(CW, CH) * 0.6, life: 1.0, color: '#fbbf24', innerColor: '#fff' });
-    // Second delayed shockwave
-    setTimeout(function() { shockwaves.push({ x: CW / 2, y: CH / 2, radius: 5, maxRadius: Math.max(CW, CH) * 0.45, life: 0.8, color: '#fde68a', innerColor: '#fbbf24' }); }, 150);
-    // HUGE burst of particles at center — 100 multi-color particles
+    // Shockwaves — more and bigger at higher levels
+    var swCount = Math.min(5, 1 + Math.floor(level / 3));
+    for (var swi = 0; swi < swCount; swi++) {
+      (function(delay, idx) {
+        setTimeout(function() {
+          shockwaves.push({
+            x: CW / 2 + (Math.random() - 0.5) * 40 * idx,
+            y: CH / 2 + (Math.random() - 0.5) * 40 * idx,
+            radius: 5 + idx * 3,
+            maxRadius: Math.max(CW, CH) * (0.4 + celebScale * 0.15),
+            life: 0.8 + celebScale * 0.2,
+            color: ['#fbbf24', '#5eead4', '#a78bfa', '#f472b6', '#fb923c'][idx % 5],
+            innerColor: ['#fff', '#fde68a', '#c4b5fd', '#fce7f3', '#fef3c7'][idx % 5]
+          });
+        }, delay);
+      })(swi * 120, swi);
+    }
+    // Particle count scales with level: 100 at level 1, up to 300 at high levels
+    var particleCount = Math.floor(100 * celebScale);
     var levelUpColors = ['#fbbf24', '#f59e0b', '#fde68a', '#fff', '#5eead4', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#c084fc'];
-    for (var lb = 0; lb < 100; lb++) {
-      var lbAngle = (lb / 100) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-      var lbSpeed = 3 + Math.random() * 7;
+    for (var lb = 0; lb < particleCount; lb++) {
+      var lbAngle = (lb / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+      var lbSpeed = (3 + Math.random() * 7) * celebScale;
       particles.push({
-        x: CW / 2 + (Math.random() - 0.5) * 20, y: CH / 2 + (Math.random() - 0.5) * 20,
+        x: CW / 2 + (Math.random() - 0.5) * 20 * celebScale, y: CH / 2 + (Math.random() - 0.5) * 20 * celebScale,
         vx: Math.cos(lbAngle) * lbSpeed,
         vy: Math.sin(lbAngle) * lbSpeed - 1,
-        life: 1.5 + Math.random() * 0.8,
+        life: (1.5 + Math.random() * 0.8) * celebScale,
         color: levelUpColors[Math.floor(Math.random() * levelUpColors.length)],
-        size: 3 + Math.random() * 6,
+        size: (3 + Math.random() * 6) * Math.min(2, celebScale),
         shape: ['star', 'circle', 'triangle', 'square'][Math.floor(Math.random() * 4)],
         rot: Math.random() * Math.PI * 2,
         rotSpeed: (Math.random() - 0.5) * 0.2
       });
     }
+    // Extra fanfare sound layers at higher levels
+    if (level >= 5) { setTimeout(function() { sfxLevelUpBig(); }, 200); }
+    if (level >= 10) { setTimeout(function() { sfxLevelUpBig(); }, 400); }
+    if (level >= 15) { setTimeout(function() { sfxLevelUpBig(); }, 600); }
     if (level > bestLevel) { bestLevel = level; saveProgress(); }
 
     // Check for line color unlocks (item 12)
