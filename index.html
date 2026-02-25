@@ -2025,7 +2025,7 @@ function getZoneLeft() {
 function spawnObj() {
   var rng = Math.random;
   var fruitTypes = ['apple', 'orange', 'watermelon', 'banana', 'strawberry', 'grapes'];
-  var funTypes = ['basketball', 'football', 'tennisball', 'baseball', 'diamond', 'snowflake', 'lightbulb', 'clock', 'cupcake', 'star', 'donut', 'icecream'];
+  var funTypes = ['basketball', 'football', 'tennisball', 'baseball', 'soccerball', 'cricketball', 'golfball', 'rugbyball', 'volleyball', 'bowlingball', 'diamond', 'snowflake', 'lightbulb', 'clock', 'cupcake', 'star', 'donut', 'icecream'];
   var types = [];
   // Egg only 10% of the time
   if (rng() < 0.10) types.push('egg');
@@ -3253,7 +3253,7 @@ function loop(now) {
 
       // Particle trail - with customisable effects (item 19)
       if (frameCount % 3 === 0) {
-        var _tc = { egg:'#fef3c7', meteor:'#ff8c00', bouncyBall:'#fbbf24', decoy:'rgba(255,255,255,0.3)', apple:'#ff6666', orange:'#ffaa44', watermelon:'#66cc66', banana:'#ffe040', strawberry:'#ff6688', grapes:'#bb88ee', basketball:'#ff8844', football:'#8b6633', tennisball:'#ccff44', baseball:'#ffffff', diamond:'#88ddff', snowflake:'#cceeff', lightbulb:'#ffee88', clock:'#dddddd', cupcake:'#ffaacc', star:'#ffdd44', donut:'#ffaa88', icecream:'#ffe4c4' };
+        var _tc = { egg:'#fef3c7', meteor:'#ff8c00', bouncyBall:'#fbbf24', decoy:'rgba(255,255,255,0.3)', apple:'#ff6666', orange:'#ffaa44', watermelon:'#66cc66', banana:'#ffe040', strawberry:'#ff6688', grapes:'#bb88ee', basketball:'#ff8844', football:'#8b6633', tennisball:'#ccff44', baseball:'#ffffff', soccerball:'#eeeeee', cricketball:'#cc4444', golfball:'#f8f8f8', rugbyball:'#aa7744', volleyball:'#ffff99', bowlingball:'#4444aa', diamond:'#88ddff', snowflake:'#cceeff', lightbulb:'#ffee88', clock:'#dddddd', cupcake:'#ffaacc', star:'#ffdd44', donut:'#ffaa88', icecream:'#ffe4c4' };
         var trailColor = _tc[obj.type] || '#93c5fd';
         var trailShape = 'star';
         var trailVY = -0.5 - Math.random() * 0.5;
@@ -3289,7 +3289,7 @@ function loop(now) {
         var trailLen = Math.min(4, Math.floor(speed / 2));
         for (var ti = 0; ti < trailLen; ti++) {
           var tt = (ti + 1) / trailLen;
-          var _mbt = { egg:'rgba(254,243,199,', meteor:'rgba(255,140,0,', bouncyBall:'rgba(251,191,36,', apple:'rgba(255,100,100,', orange:'rgba(255,170,68,', watermelon:'rgba(102,204,102,', banana:'rgba(255,224,64,', strawberry:'rgba(255,100,136,', grapes:'rgba(187,136,238,', basketball:'rgba(255,136,68,', football:'rgba(139,102,51,', tennisball:'rgba(204,255,68,', baseball:'rgba(255,255,255,', diamond:'rgba(136,221,255,', snowflake:'rgba(204,238,255,', lightbulb:'rgba(255,238,136,', clock:'rgba(221,221,221,', cupcake:'rgba(255,170,204,', star:'rgba(255,221,68,', donut:'rgba(255,170,136,', icecream:'rgba(255,228,196,' };
+          var _mbt = { egg:'rgba(254,243,199,', meteor:'rgba(255,140,0,', bouncyBall:'rgba(251,191,36,', apple:'rgba(255,100,100,', orange:'rgba(255,170,68,', watermelon:'rgba(102,204,102,', banana:'rgba(255,224,64,', strawberry:'rgba(255,100,136,', grapes:'rgba(187,136,238,', basketball:'rgba(255,136,68,', football:'rgba(139,102,51,', tennisball:'rgba(204,255,68,', baseball:'rgba(255,255,255,', soccerball:'rgba(238,238,238,', cricketball:'rgba(204,68,68,', golfball:'rgba(248,248,248,', rugbyball:'rgba(170,119,68,', volleyball:'rgba(255,255,153,', bowlingball:'rgba(68,68,170,', diamond:'rgba(136,221,255,', snowflake:'rgba(204,238,255,', lightbulb:'rgba(255,238,136,', clock:'rgba(221,221,221,', cupcake:'rgba(255,170,204,', star:'rgba(255,221,68,', donut:'rgba(255,170,136,', icecream:'rgba(255,228,196,' };
           var trColor = _mbt[obj.type] || 'rgba(147,197,253,';
           particles.push({
             x: obj.x - obj.vx * tt * 3,
@@ -4289,6 +4289,8 @@ function loop(now) {
       }
       ctx.rotate(obj.rot || 0);
       ctx.scale(obj.squashX || 1, obj.squashY || 1);
+      // Base size increase for all objects
+      if (!obj.isBoss) ctx.scale(1.3, 1.3);
 
       if (obj.type === 'powerup') {
         // Power-up orb — simplified to colored circle + icon
@@ -4610,6 +4612,145 @@ function loop(now) {
         }
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
         ctx.beginPath(); ctx.ellipse(-3, -4, 2.5, 3.5, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'soccerball') {
+        // Soccer ball
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 15, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f5f5f5';
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+        // Black pentagons
+        ctx.fillStyle = '#222';
+        for (var pi2 = 0; pi2 < 5; pi2++) {
+          var pa = pi2 * Math.PI * 2 / 5 - Math.PI / 2;
+          ctx.beginPath();
+          for (var pj = 0; pj < 5; pj++) {
+            var ppa = pa + pj * Math.PI * 2 / 5;
+            var ppx = Math.cos(pa) * 8 + Math.cos(ppa) * 3;
+            var ppy = Math.sin(pa) * 8 + Math.sin(ppa) * 3;
+            if (pj === 0) ctx.moveTo(ppx, ppy); else ctx.lineTo(ppx, ppy);
+          }
+          ctx.closePath(); ctx.fill();
+        }
+        // Center pentagon
+        ctx.beginPath();
+        for (var pj = 0; pj < 5; pj++) {
+          var ppa = pj * Math.PI * 2 / 5 - Math.PI / 2;
+          if (pj === 0) ctx.moveTo(Math.cos(ppa) * 4, Math.sin(ppa) * 4);
+          else ctx.lineTo(Math.cos(ppa) * 4, Math.sin(ppa) * 4);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.ellipse(-4, -5, 3, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'cricketball') {
+        // Cricket ball - red with seam
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 15, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        var cbGrad = ctx.createRadialGradient(-3, -3, 1, 1, 2, 12);
+        cbGrad.addColorStop(0, '#dd3333');
+        cbGrad.addColorStop(0.6, '#bb1111');
+        cbGrad.addColorStop(1, '#880000');
+        ctx.fillStyle = cbGrad;
+        ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+        // Seam - prominent stitched line across middle
+        ctx.strokeStyle = '#ffcc88';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, 0, 8, -0.3, Math.PI + 0.3); ctx.stroke();
+        // Stitch marks along seam
+        ctx.lineWidth = 0.8;
+        for (var csi = 0; csi < 7; csi++) {
+          var csa = -0.3 + csi * (Math.PI + 0.6) / 6;
+          var csx = Math.cos(csa) * 7;
+          var csy = Math.sin(csa) * 7;
+          ctx.beginPath(); ctx.moveTo(csx, csy); ctx.lineTo(Math.cos(csa) * 9.5, Math.sin(csa) * 9.5); ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath(); ctx.ellipse(-3, -4, 2.5, 3, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'golfball') {
+        // Golf ball - white with dimples
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 13, 8, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f8f8f5';
+        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+        // Dimples
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        for (var gdi = 0; gdi < 12; gdi++) {
+          var gda = gdi * Math.PI * 2 / 12;
+          ctx.beginPath(); ctx.arc(Math.cos(gda) * 6, Math.sin(gda) * 6, 1.5, 0, Math.PI * 2); ctx.fill();
+        }
+        for (var gdi = 0; gdi < 6; gdi++) {
+          var gda = gdi * Math.PI * 2 / 6 + 0.3;
+          ctx.beginPath(); ctx.arc(Math.cos(gda) * 3, Math.sin(gda) * 3, 1.2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath(); ctx.ellipse(-3, -4, 2.5, 3, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'rugbyball') {
+        // Rugby ball - oval, brown with laces
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 16, 8, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        var rbGrad = ctx.createRadialGradient(-2, -2, 2, 1, 1, 14);
+        rbGrad.addColorStop(0, '#cc8844');
+        rbGrad.addColorStop(0.6, '#996633');
+        rbGrad.addColorStop(1, '#664422');
+        ctx.fillStyle = rbGrad;
+        ctx.beginPath(); ctx.ellipse(0, 0, 9, 14, 0, 0, Math.PI * 2); ctx.fill();
+        // Seam line
+        ctx.strokeStyle = '#ffddaa';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, 12); ctx.stroke();
+        // Cross stitches
+        for (var rbi = -3; rbi <= 3; rbi++) {
+          ctx.beginPath(); ctx.moveTo(-2.5, rbi * 3); ctx.lineTo(2.5, rbi * 3); ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath(); ctx.ellipse(-3, -4, 2, 4, -0.2, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'volleyball') {
+        // Volleyball - white/yellow with curved lines
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 15, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        var vbGrad = ctx.createRadialGradient(-3, -3, 2, 1, 2, 13);
+        vbGrad.addColorStop(0, '#fffff0');
+        vbGrad.addColorStop(0.6, '#eeee88');
+        vbGrad.addColorStop(1, '#ccbb44');
+        ctx.fillStyle = vbGrad;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+        // Panel lines
+        ctx.strokeStyle = 'rgba(150,130,50,0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(0, -14, 12, 0.8, 2.3); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 14, 12, -2.3, -0.8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-14, 0, 12, -0.6, 0.6); ctx.stroke();
+        ctx.beginPath(); ctx.arc(14, 0, 12, Math.PI - 0.6, Math.PI + 0.6); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.ellipse(-4, -5, 3, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'bowlingball') {
+        // Bowling ball - dark blue/black with finger holes
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath(); ctx.ellipse(2, 16, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        var bwGrad = ctx.createRadialGradient(-4, -4, 2, 2, 3, 14);
+        bwGrad.addColorStop(0, '#4466bb');
+        bwGrad.addColorStop(0.5, '#223388');
+        bwGrad.addColorStop(1, '#111144');
+        ctx.fillStyle = bwGrad;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+        // Finger holes
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.beginPath(); ctx.arc(-3, -5, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3, -5, 2.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -1, 2.2, 0, Math.PI * 2); ctx.fill();
+        // Hole depth effect
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.arc(-2.5, -4.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(3.5, -4.5, 1.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0.5, -0.5, 1.3, 0, Math.PI * 2); ctx.fill();
+        // Specular
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath(); ctx.ellipse(-5, -6, 3, 4, -0.3, 0, Math.PI * 2); ctx.fill();
       } else if (obj.type === 'diamond') {
         // Diamond gem
         ctx.fillStyle = 'rgba(0,0,0,0.08)';
