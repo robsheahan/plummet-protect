@@ -2799,59 +2799,144 @@ function onCatch(obj) {
     levelBounces = 0;
     spawnPauseTimer = 2500; // 2.5 second breather before new objects spawn
     sfxLevelUpBig();
-    // Celebration scales with level — gets bigger every level!
-    var celebScale = Math.min(3, 1 + (level - 1) * 0.15); // 1x at level 1, up to 3x at level 14+
-    levelUpFlash = Math.floor(30 * celebScale);
-    levelUpBanner = Math.floor(150 * celebScale);
+    // Celebration scales with every level — never stops growing!
+    var celebScale = 1 + (level - 1) * 0.25; // grows 25% per level, no cap
+    var cappedScale = Math.min(celebScale, 6); // cap visual extremes at 6x
+    levelUpFlash = Math.floor(20 + level * 5);
+    levelUpBanner = Math.floor(120 + level * 15);
     levelUpBannerLevel = level;
-    shakeAmount = Math.floor(20 * celebScale);
-    // Encouraging message between levels
-    levelMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
-    levelMessageTimer = Math.floor(120 * celebScale);
-    // Camera zoom scales with level
-    cameraZoomTarget = 1.08 + (celebScale - 1) * 0.04; // up to 1.16 at high levels
-    cameraZoomTimer = Math.floor(1200 * celebScale);
+    shakeAmount = Math.min(60, Math.floor(15 + level * 3));
+    // Encouraging message — gets more hyped at higher levels
+    var hypeMessages = ['Nice work!', 'Keep going!', "You're on fire!", 'Unstoppable!', 'INCREDIBLE!', 'LEGENDARY!', 'GODLIKE!', 'UNBELIEVABLE!', 'ABSOLUTELY INSANE!', 'OFF THE CHARTS!!!'];
+    var msgIdx = Math.min(hypeMessages.length - 1, Math.floor(level / 2));
+    levelMessage = hypeMessages[msgIdx];
+    levelMessageTimer = Math.floor(100 + level * 10);
+    // Camera zoom grows with level
+    cameraZoomTarget = Math.min(1.25, 1.06 + level * 0.012);
+    cameraZoomTimer = Math.floor(1000 + level * 100);
     // Milestone check (item 14)
     checkMilestones();
-    // Shockwaves — more and bigger at higher levels
-    var swCount = Math.min(5, 1 + Math.floor(level / 3));
+    // Shockwaves — more rings every level
+    var swCount = Math.min(8, 1 + Math.floor(level / 2));
+    var swColors = ['#fbbf24', '#5eead4', '#a78bfa', '#f472b6', '#fb923c', '#ef4444', '#22d3ee', '#10b981'];
+    var swInner = ['#fff', '#fde68a', '#c4b5fd', '#fce7f3', '#fef3c7', '#fecaca', '#cffafe', '#d1fae5'];
     for (var swi = 0; swi < swCount; swi++) {
       (function(delay, idx) {
         setTimeout(function() {
           shockwaves.push({
-            x: CW / 2 + (Math.random() - 0.5) * 40 * idx,
-            y: CH / 2 + (Math.random() - 0.5) * 40 * idx,
-            radius: 5 + idx * 3,
-            maxRadius: Math.max(CW, CH) * (0.4 + celebScale * 0.15),
-            life: 0.8 + celebScale * 0.2,
-            color: ['#fbbf24', '#5eead4', '#a78bfa', '#f472b6', '#fb923c'][idx % 5],
-            innerColor: ['#fff', '#fde68a', '#c4b5fd', '#fce7f3', '#fef3c7'][idx % 5]
+            x: CW / 2 + (Math.random() - 0.5) * 30 * idx,
+            y: CH / 2 + (Math.random() - 0.5) * 30 * idx,
+            radius: 5 + idx * 4,
+            maxRadius: Math.max(CW, CH) * (0.35 + cappedScale * 0.1),
+            life: 0.7 + cappedScale * 0.15,
+            color: swColors[idx % swColors.length],
+            innerColor: swInner[idx % swInner.length]
           });
         }, delay);
-      })(swi * 120, swi);
+      })(swi * 100, swi);
     }
-    // Particle count scales with level: 100 at level 1, up to 300 at high levels
-    var particleCount = Math.floor(100 * celebScale);
-    var levelUpColors = ['#fbbf24', '#f59e0b', '#fde68a', '#fff', '#5eead4', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#c084fc'];
+    // Center explosion — particle count grows every level
+    var particleCount = Math.min(500, Math.floor(60 + level * 30));
+    var levelUpColors = ['#fbbf24', '#f59e0b', '#fde68a', '#fff', '#5eead4', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#c084fc', '#ef4444', '#22d3ee', '#10b981', '#e879f9'];
     for (var lb = 0; lb < particleCount; lb++) {
-      var lbAngle = (lb / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
-      var lbSpeed = (3 + Math.random() * 7) * celebScale;
+      var lbAngle = (lb / particleCount) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      var lbSpeed = (2 + Math.random() * 5) * Math.min(cappedScale, 4);
       particles.push({
-        x: CW / 2 + (Math.random() - 0.5) * 20 * celebScale, y: CH / 2 + (Math.random() - 0.5) * 20 * celebScale,
+        x: CW / 2 + (Math.random() - 0.5) * 30, y: CH / 2 + (Math.random() - 0.5) * 30,
         vx: Math.cos(lbAngle) * lbSpeed,
-        vy: Math.sin(lbAngle) * lbSpeed - 1,
-        life: (1.5 + Math.random() * 0.8) * celebScale,
+        vy: Math.sin(lbAngle) * lbSpeed - 2,
+        life: 1.2 + Math.random() * 0.6 * Math.min(cappedScale, 3),
         color: levelUpColors[Math.floor(Math.random() * levelUpColors.length)],
-        size: (3 + Math.random() * 6) * Math.min(2, celebScale),
+        size: 2 + Math.random() * 5 * Math.min(cappedScale, 2.5),
         shape: ['star', 'circle', 'triangle', 'square'][Math.floor(Math.random() * 4)],
         rot: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.2
+        rotSpeed: (Math.random() - 0.5) * 0.3
       });
     }
-    // Extra fanfare sound layers at higher levels
-    if (level >= 5) { setTimeout(function() { sfxLevelUpBig(); }, 200); }
-    if (level >= 10) { setTimeout(function() { sfxLevelUpBig(); }, 400); }
-    if (level >= 15) { setTimeout(function() { sfxLevelUpBig(); }, 600); }
+    // Level 3+: Firework bursts from random positions
+    if (level >= 3) {
+      var fwCount = Math.min(6, Math.floor(level / 2));
+      for (var fwi = 0; fwi < fwCount; fwi++) {
+        (function(delay) {
+          setTimeout(function() {
+            var fx = CW * 0.15 + Math.random() * CW * 0.7;
+            var fy = CH * 0.15 + Math.random() * CH * 0.5;
+            var fwColor = levelUpColors[Math.floor(Math.random() * levelUpColors.length)];
+            for (var fi = 0; fi < 25; fi++) {
+              var fa = (fi / 25) * Math.PI * 2;
+              var fs = 2 + Math.random() * 4;
+              particles.push({
+                x: fx, y: fy,
+                vx: Math.cos(fa) * fs, vy: Math.sin(fa) * fs - 1,
+                life: 0.8 + Math.random() * 0.6,
+                color: fwColor, size: 2 + Math.random() * 4,
+                shape: 'star', rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.2
+              });
+            }
+            shockwaves.push({ x: fx, y: fy, radius: 5, maxRadius: 120 + level * 8, life: 0.6, color: fwColor, innerColor: '#fff' });
+          }, delay);
+        })(200 + fwi * 180);
+      }
+    }
+    // Level 5+: Confetti rain from top of screen
+    if (level >= 5) {
+      var confettiCount = Math.min(80, level * 5);
+      for (var ci2 = 0; ci2 < confettiCount; ci2++) {
+        particles.push({
+          x: Math.random() * CW, y: -10 - Math.random() * 200,
+          vx: (Math.random() - 0.5) * 2,
+          vy: 1 + Math.random() * 3,
+          life: 2 + Math.random() * 2,
+          color: levelUpColors[Math.floor(Math.random() * levelUpColors.length)],
+          size: 3 + Math.random() * 4,
+          shape: ['square', 'circle', 'triangle'][Math.floor(Math.random() * 3)],
+          rot: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.3
+        });
+      }
+    }
+    // Level 8+: Side fountain bursts from both edges
+    if (level >= 8) {
+      for (var side = 0; side < 2; side++) {
+        var sx = side === 0 ? 20 : CW - 20;
+        var fountainCount = Math.min(40, level * 3);
+        for (var fni = 0; fni < fountainCount; fni++) {
+          var fna = side === 0 ? (-Math.PI / 4 + Math.random() * Math.PI / 2) : (Math.PI * 0.75 + Math.random() * Math.PI / 2);
+          var fns = 3 + Math.random() * 6;
+          particles.push({
+            x: sx, y: CH * 0.3 + Math.random() * CH * 0.4,
+            vx: Math.cos(fna) * fns, vy: Math.sin(fna) * fns - 3,
+            life: 1 + Math.random() * 1.5,
+            color: levelUpColors[Math.floor(Math.random() * levelUpColors.length)],
+            size: 2 + Math.random() * 5,
+            shape: 'star', rot: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 0.2
+          });
+        }
+      }
+    }
+    // Level 12+: Spiral burst from center
+    if (level >= 12) {
+      for (var spi2 = 0; spi2 < 60; spi2++) {
+        var spAngle = spi2 * 0.4;
+        var spDist = spi2 * 2;
+        var spSpeed = 1 + spi2 * 0.1;
+        particles.push({
+          x: CW / 2, y: CH / 2,
+          vx: Math.cos(spAngle) * spSpeed, vy: Math.sin(spAngle) * spSpeed,
+          life: 1.5 + Math.random(),
+          color: levelUpColors[spi2 % levelUpColors.length],
+          size: 3 + Math.random() * 3,
+          shape: 'circle', rot: 0, rotSpeed: 0.1
+        });
+      }
+    }
+    // Sound layers stack up every few levels
+    if (level >= 3) { setTimeout(function() { sfxLevelUpBig(); }, 150); }
+    if (level >= 6) { setTimeout(function() { sfxLevelUpBig(); }, 300); }
+    if (level >= 9) { setTimeout(function() { sfxLevelUpBig(); }, 450); }
+    if (level >= 12) { setTimeout(function() { sfxLevelUpBig(); }, 600); }
+    if (level >= 15) { setTimeout(function() { sfxLevelUpBig(); }, 750); }
+    if (level >= 18) { setTimeout(function() { sfxLevelUpBig(); }, 900); }
     if (level > bestLevel) { bestLevel = level; saveProgress(); }
 
     // Check for line color unlocks (item 12)
