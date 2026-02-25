@@ -3405,7 +3405,8 @@ function loop(now) {
 
       // Rotation based on total speed (faster objects = faster spin)
       var totalSpeed = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy);
-      obj.rot += obj.type === 'meteor' ? obj.vx * 0.08 + 0.03 : obj.vx * 0.04 * Math.max(1, totalSpeed * 0.5);
+      // Only meteors spin
+      if (obj.type === 'meteor') obj.rot += obj.vx * 0.08 + 0.03;
       // Squash recovery (spring back to 1,1)
       obj.squashX += (1 - obj.squashX) * 0.15;
       obj.squashY += (1 - obj.squashY) * 0.15;
