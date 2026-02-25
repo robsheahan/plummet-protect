@@ -2025,10 +2025,12 @@ function getZoneLeft() {
 function spawnObj() {
   var rng = Math.random;
   var fruitTypes = ['apple', 'orange', 'watermelon', 'banana', 'strawberry', 'grapes'];
+  var funTypes = ['basketball', 'football', 'tennisball', 'baseball', 'diamond', 'snowflake', 'lightbulb', 'clock', 'cupcake', 'star', 'donut', 'icecream'];
+  var allExtraTypes = fruitTypes.concat(funTypes);
   var types = ['egg'];
-  // Fruits from level 2+
-  if (level >= 2) types.push(fruitTypes[Math.floor(rng() * fruitTypes.length)]);
-  if (level >= 3) types.push(fruitTypes[Math.floor(rng() * fruitTypes.length)]);
+  // Extra objects from level 2+
+  if (level >= 2) types.push(allExtraTypes[Math.floor(rng() * allExtraTypes.length)]);
+  if (level >= 3) types.push(allExtraTypes[Math.floor(rng() * allExtraTypes.length)]);
   // New types by level
   if (level >= 4) types.push('bouncyBall');
   // Meteors start appearing at level 5 — steeper increase after level 10
@@ -3248,7 +3250,8 @@ function loop(now) {
 
       // Particle trail - with customisable effects (item 19)
       if (frameCount % 3 === 0) {
-        var trailColor = obj.type === 'egg' ? '#fef3c7' : obj.type === 'meteor' ? '#ff8c00' : obj.type === 'bouncyBall' ? '#fbbf24' : obj.type === 'decoy' ? 'rgba(255,255,255,0.3)' : obj.type === 'apple' ? '#ff6666' : obj.type === 'orange' ? '#ffaa44' : obj.type === 'watermelon' ? '#66cc66' : obj.type === 'banana' ? '#ffe040' : obj.type === 'strawberry' ? '#ff6688' : obj.type === 'grapes' ? '#bb88ee' : '#93c5fd';
+        var _tc = { egg:'#fef3c7', meteor:'#ff8c00', bouncyBall:'#fbbf24', decoy:'rgba(255,255,255,0.3)', apple:'#ff6666', orange:'#ffaa44', watermelon:'#66cc66', banana:'#ffe040', strawberry:'#ff6688', grapes:'#bb88ee', basketball:'#ff8844', football:'#8b6633', tennisball:'#ccff44', baseball:'#ffffff', diamond:'#88ddff', snowflake:'#cceeff', lightbulb:'#ffee88', clock:'#dddddd', cupcake:'#ffaacc', star:'#ffdd44', donut:'#ffaa88', icecream:'#ffe4c4' };
+        var trailColor = _tc[obj.type] || '#93c5fd';
         var trailShape = 'star';
         var trailVY = -0.5 - Math.random() * 0.5;
         if (activeTrailEffect === 'flames') {
@@ -3283,8 +3286,8 @@ function loop(now) {
         var trailLen = Math.min(4, Math.floor(speed / 2));
         for (var ti = 0; ti < trailLen; ti++) {
           var tt = (ti + 1) / trailLen;
-          var fruitTrails = { apple: 'rgba(255,100,100,', orange: 'rgba(255,170,68,', watermelon: 'rgba(102,204,102,', banana: 'rgba(255,224,64,', strawberry: 'rgba(255,100,136,', grapes: 'rgba(187,136,238,' };
-          var trColor = obj.type === 'egg' ? 'rgba(254,243,199,' : obj.type === 'meteor' ? 'rgba(255,140,0,' : obj.type === 'bouncyBall' ? 'rgba(251,191,36,' : (fruitTrails[obj.type] || 'rgba(147,197,253,');
+          var _mbt = { egg:'rgba(254,243,199,', meteor:'rgba(255,140,0,', bouncyBall:'rgba(251,191,36,', apple:'rgba(255,100,100,', orange:'rgba(255,170,68,', watermelon:'rgba(102,204,102,', banana:'rgba(255,224,64,', strawberry:'rgba(255,100,136,', grapes:'rgba(187,136,238,', basketball:'rgba(255,136,68,', football:'rgba(139,102,51,', tennisball:'rgba(204,255,68,', baseball:'rgba(255,255,255,', diamond:'rgba(136,221,255,', snowflake:'rgba(204,238,255,', lightbulb:'rgba(255,238,136,', clock:'rgba(221,221,221,', cupcake:'rgba(255,170,204,', star:'rgba(255,221,68,', donut:'rgba(255,170,136,', icecream:'rgba(255,228,196,' };
+          var trColor = _mbt[obj.type] || 'rgba(147,197,253,';
           particles.push({
             x: obj.x - obj.vx * tt * 3,
             y: obj.y - obj.vy * tt * 3,
@@ -4525,6 +4528,319 @@ function loop(now) {
         ctx.beginPath(); ctx.arc(-2, -5, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(-5.5, 2, 1.5, 0, Math.PI * 2); ctx.fill();
         ctx.beginPath(); ctx.arc(-9, 9, 1.5, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'basketball') {
+        // Basketball
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath(); ctx.ellipse(2, 16, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        var bbGrad = ctx.createRadialGradient(-3, -4, 2, 2, 3, 14);
+        bbGrad.addColorStop(0, '#ff8833');
+        bbGrad.addColorStop(0.6, '#dd5500');
+        bbGrad.addColorStop(1, '#993300');
+        ctx.fillStyle = bbGrad;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+        // Lines
+        ctx.strokeStyle = 'rgba(50,20,0,0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(-13, 0); ctx.lineTo(13, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(0, 13); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-7, 0, 10, -0.8, 0.8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(7, 0, 10, Math.PI - 0.8, Math.PI + 0.8); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath(); ctx.ellipse(-4, -5, 3, 4, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'football') {
+        // American football
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 16, 8, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        var fbGrad = ctx.createRadialGradient(-3, -3, 2, 1, 1, 14);
+        fbGrad.addColorStop(0, '#a0734a');
+        fbGrad.addColorStop(0.6, '#7a4e2d');
+        fbGrad.addColorStop(1, '#4a2c10');
+        ctx.fillStyle = fbGrad;
+        ctx.save(); ctx.rotate(0.4);
+        ctx.beginPath(); ctx.ellipse(0, 0, 8, 14, 0, 0, Math.PI * 2); ctx.fill();
+        // Laces
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke();
+        for (var fi = -2; fi <= 2; fi++) {
+          ctx.beginPath(); ctx.moveTo(-3, fi * 3); ctx.lineTo(3, fi * 3); ctx.stroke();
+        }
+        ctx.restore();
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath(); ctx.ellipse(-3, -5, 2.5, 4, -0.2, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'tennisball') {
+        // Tennis ball
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 15, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        var tbGrad = ctx.createRadialGradient(-3, -3, 1, 1, 2, 12);
+        tbGrad.addColorStop(0, '#d4ff44');
+        tbGrad.addColorStop(0.6, '#b8e020');
+        tbGrad.addColorStop(1, '#88aa00');
+        ctx.fillStyle = tbGrad;
+        ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+        // Seam lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.arc(-6, 0, 9, -0.9, 0.9); ctx.stroke();
+        ctx.beginPath(); ctx.arc(6, 0, 9, Math.PI - 0.9, Math.PI + 0.9); ctx.stroke();
+        // Fuzz texture
+        ctx.fillStyle = 'rgba(255,255,200,0.15)';
+        ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath(); ctx.ellipse(-3, -4, 2.5, 3.5, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'baseball') {
+        // Baseball
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 15, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#f5f5f0';
+        ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.fill();
+        // Red stitching
+        ctx.strokeStyle = '#cc2222';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(-6, 0, 8, -1.2, 1.2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(6, 0, 8, Math.PI - 1.2, Math.PI + 1.2); ctx.stroke();
+        // Stitch marks
+        for (var bsi = -3; bsi <= 3; bsi++) {
+          var bsa = bsi * 0.3;
+          ctx.beginPath(); ctx.moveTo(-6 + Math.cos(bsa) * 7, Math.sin(bsa) * 7); ctx.lineTo(-6 + Math.cos(bsa) * 9.5, Math.sin(bsa) * 9.5); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(6 + Math.cos(Math.PI + bsa) * 7, Math.sin(Math.PI + bsa) * 7); ctx.lineTo(6 + Math.cos(Math.PI + bsa) * 9.5, Math.sin(Math.PI + bsa) * 9.5); ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath(); ctx.ellipse(-3, -4, 2.5, 3.5, -0.3, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'diamond') {
+        // Diamond gem
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.beginPath(); ctx.ellipse(2, 18, 8, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Diamond shape
+        ctx.beginPath();
+        ctx.moveTo(0, -14); ctx.lineTo(11, -3); ctx.lineTo(0, 15); ctx.lineTo(-11, -3); ctx.closePath();
+        var dmGrad = ctx.createLinearGradient(-10, -14, 10, 15);
+        dmGrad.addColorStop(0, '#e0f4ff');
+        dmGrad.addColorStop(0.3, '#88ddff');
+        dmGrad.addColorStop(0.6, '#44aadd');
+        dmGrad.addColorStop(1, '#2277aa');
+        ctx.fillStyle = dmGrad;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Facet lines
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.beginPath(); ctx.moveTo(-11, -3); ctx.lineTo(11, -3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(-4, -3); ctx.lineTo(0, 15); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(4, -3); ctx.lineTo(0, 15); ctx.stroke();
+        // Sparkle
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.ellipse(-3, -7, 2, 3, -0.2, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'snowflake') {
+        // Snowflake
+        ctx.strokeStyle = '#cceeFF';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (var sfi = 0; sfi < 6; sfi++) {
+          ctx.save();
+          ctx.rotate(sfi * Math.PI / 3);
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -13); ctx.stroke();
+          // Branch
+          ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(-4, -11); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(4, -11); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(-3, -7); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, -5); ctx.lineTo(3, -7); ctx.stroke();
+          ctx.restore();
+        }
+        // Center dot
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'lightbulb') {
+        // Lightbulb
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 18, 7, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Glass bulb
+        var lbGrad = ctx.createRadialGradient(-2, -4, 2, 0, -2, 12);
+        lbGrad.addColorStop(0, '#fffde0');
+        lbGrad.addColorStop(0.5, '#ffee88');
+        lbGrad.addColorStop(1, '#ddbb44');
+        ctx.fillStyle = lbGrad;
+        ctx.beginPath();
+        ctx.arc(0, -3, 10, Math.PI, 0);
+        ctx.lineTo(5, 8);
+        ctx.lineTo(-5, 8);
+        ctx.closePath();
+        ctx.fill();
+        // Metal base
+        ctx.fillStyle = '#aaa';
+        ctx.fillRect(-5, 8, 10, 3);
+        ctx.fillStyle = '#888';
+        ctx.fillRect(-4, 11, 8, 2);
+        ctx.fillStyle = '#aaa';
+        ctx.fillRect(-3, 13, 6, 2);
+        // Filament
+        ctx.strokeStyle = 'rgba(255,180,40,0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-2, 4); ctx.lineTo(0, -2); ctx.lineTo(2, 4); ctx.stroke();
+        // Glow
+        ctx.fillStyle = 'rgba(255,255,200,0.5)';
+        ctx.beginPath(); ctx.ellipse(-3, -6, 3, 4, -0.2, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'clock') {
+        // Clock face
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 16, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        // Body
+        ctx.fillStyle = '#f0f0f0';
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.stroke();
+        // Hour marks
+        ctx.fillStyle = '#333';
+        for (var ci = 0; ci < 12; ci++) {
+          var ca = ci * Math.PI / 6;
+          ctx.beginPath(); ctx.arc(Math.cos(ca) * 10, Math.sin(ca) * 10, 1, 0, Math.PI * 2); ctx.fill();
+        }
+        // Hands
+        var clockAngle = (now * 0.001) % (Math.PI * 2);
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(clockAngle - Math.PI / 2) * 7, Math.sin(clockAngle - Math.PI / 2) * 7); ctx.stroke();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(clockAngle * 0.08 - Math.PI / 2) * 5, Math.sin(clockAngle * 0.08 - Math.PI / 2) * 5); ctx.stroke();
+        // Center dot
+        ctx.fillStyle = '#cc0000';
+        ctx.beginPath(); ctx.arc(0, 0, 1.5, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'cupcake') {
+        // Cupcake
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 17, 9, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Wrapper (trapezoid)
+        ctx.fillStyle = '#ff88aa';
+        ctx.beginPath();
+        ctx.moveTo(-10, 4); ctx.lineTo(-8, 15); ctx.lineTo(8, 15); ctx.lineTo(10, 4); ctx.closePath();
+        ctx.fill();
+        // Wrapper lines
+        ctx.strokeStyle = 'rgba(200,60,100,0.3)';
+        ctx.lineWidth = 0.8;
+        for (var wi = -3; wi <= 3; wi++) {
+          ctx.beginPath(); ctx.moveTo(wi * 2.5, 4); ctx.lineTo(wi * 2.2, 15); ctx.stroke();
+        }
+        // Frosting
+        var frostGrad = ctx.createRadialGradient(-2, -3, 1, 0, -1, 10);
+        frostGrad.addColorStop(0, '#ffccdd');
+        frostGrad.addColorStop(1, '#ff88bb');
+        ctx.fillStyle = frostGrad;
+        ctx.beginPath();
+        ctx.moveTo(-10, 4);
+        ctx.quadraticCurveTo(-8, -6, -3, -2);
+        ctx.quadraticCurveTo(0, -8, 3, -2);
+        ctx.quadraticCurveTo(8, -6, 10, 4);
+        ctx.closePath();
+        ctx.fill();
+        // Sprinkles
+        var sprColors = ['#ff4444', '#44ff44', '#4488ff', '#ffff44', '#ff88ff'];
+        for (var spi = 0; spi < 6; spi++) {
+          ctx.fillStyle = sprColors[spi % sprColors.length];
+          ctx.save();
+          ctx.translate(-6 + spi * 2.4, -2 + (spi % 2) * 3);
+          ctx.rotate(spi * 0.8);
+          ctx.fillRect(-1.5, -0.5, 3, 1);
+          ctx.restore();
+        }
+        // Cherry on top
+        ctx.fillStyle = '#cc0033';
+        ctx.beginPath(); ctx.arc(0, -8, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.arc(-1, -9, 1, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'star') {
+        // 5-pointed star
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.beginPath(); ctx.ellipse(2, 17, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        var starGrad = ctx.createRadialGradient(-2, -3, 1, 0, 0, 14);
+        starGrad.addColorStop(0, '#ffee66');
+        starGrad.addColorStop(0.5, '#ffcc00');
+        starGrad.addColorStop(1, '#cc8800');
+        ctx.fillStyle = starGrad;
+        ctx.beginPath();
+        for (var sti = 0; sti < 5; sti++) {
+          var stAngle = sti * Math.PI * 2 / 5 - Math.PI / 2;
+          var stAngle2 = stAngle + Math.PI / 5;
+          ctx.lineTo(Math.cos(stAngle) * 14, Math.sin(stAngle) * 14);
+          ctx.lineTo(Math.cos(stAngle2) * 6, Math.sin(stAngle2) * 6);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(180,120,0,0.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.beginPath(); ctx.ellipse(-3, -6, 2.5, 3.5, -0.2, 0, Math.PI * 2); ctx.fill();
+      } else if (obj.type === 'donut') {
+        // Donut (torus viewed from above)
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 16, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+        // Dough
+        var donutGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 13);
+        donutGrad.addColorStop(0, '#d4944a');
+        donutGrad.addColorStop(1, '#a06830');
+        ctx.fillStyle = donutGrad;
+        ctx.beginPath(); ctx.arc(0, 0, 13, 0, Math.PI * 2); ctx.fill();
+        // Hole
+        ctx.fillStyle = '#1a1a2e';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        // Pink icing on top half
+        ctx.fillStyle = '#ff88bb';
+        ctx.beginPath(); ctx.arc(0, 0, 12, Math.PI, 0); ctx.closePath(); ctx.fill();
+        // Icing drip
+        ctx.beginPath();
+        ctx.moveTo(-12, 0); ctx.quadraticCurveTo(-10, 4, -8, 0);
+        ctx.moveTo(8, 0); ctx.quadraticCurveTo(10, 5, 12, 0);
+        ctx.fillStyle = '#ff88bb'; ctx.fill();
+        // Hole in icing
+        ctx.fillStyle = '#1a1a2e';
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+        // Sprinkles on icing
+        var dsprColors = ['#ff4444', '#44ff44', '#4488ff', '#ffff44'];
+        for (var dsi = 0; dsi < 5; dsi++) {
+          ctx.fillStyle = dsprColors[dsi % dsprColors.length];
+          ctx.save();
+          var dsAngle = Math.PI + dsi * 0.6 + 0.3;
+          ctx.translate(Math.cos(dsAngle) * 8.5, Math.sin(dsAngle) * 8.5);
+          ctx.rotate(dsAngle);
+          ctx.fillRect(-1.5, -0.5, 3, 1);
+          ctx.restore();
+        }
+      } else if (obj.type === 'icecream') {
+        // Ice cream cone
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+        ctx.beginPath(); ctx.ellipse(2, 18, 8, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+        // Cone (triangle)
+        var coneGrad = ctx.createLinearGradient(-7, 0, 7, 0);
+        coneGrad.addColorStop(0, '#c4944a');
+        coneGrad.addColorStop(0.5, '#daa860');
+        coneGrad.addColorStop(1, '#b08040');
+        ctx.fillStyle = coneGrad;
+        ctx.beginPath(); ctx.moveTo(-8, 2); ctx.lineTo(0, 16); ctx.lineTo(8, 2); ctx.closePath(); ctx.fill();
+        // Waffle pattern
+        ctx.strokeStyle = 'rgba(130,80,30,0.3)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(-6, 4); ctx.lineTo(2, 14); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-2, 3); ctx.lineTo(4, 12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(6, 4); ctx.lineTo(-2, 14); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(2, 3); ctx.lineTo(-4, 12); ctx.stroke();
+        // Scoop 1 (vanilla)
+        var sc1Grad = ctx.createRadialGradient(-2, -6, 1, 0, -5, 9);
+        sc1Grad.addColorStop(0, '#fff8e0');
+        sc1Grad.addColorStop(1, '#eed8a0');
+        ctx.fillStyle = sc1Grad;
+        ctx.beginPath(); ctx.arc(0, -4, 9, 0, Math.PI * 2); ctx.fill();
+        // Scoop 2 (strawberry, on top)
+        var sc2Grad = ctx.createRadialGradient(-1, -14, 1, 0, -13, 7);
+        sc2Grad.addColorStop(0, '#ffaacc');
+        sc2Grad.addColorStop(1, '#dd6699');
+        ctx.fillStyle = sc2Grad;
+        ctx.beginPath(); ctx.arc(0, -12, 7, 0, Math.PI * 2); ctx.fill();
+        // Speculars
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath(); ctx.ellipse(-3, -7, 2, 3, -0.2, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(-2, -14, 1.5, 2.5, -0.2, 0, Math.PI * 2); ctx.fill();
       } else if (obj.type === 'meteor') {
         // Hyper-realistic meteor rendering
         var mSpeed = Math.sqrt(obj.vx * obj.vx + obj.vy * obj.vy) || 1;
