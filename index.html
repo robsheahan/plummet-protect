@@ -2027,10 +2027,12 @@ function spawnObj() {
   var fruitTypes = ['apple', 'orange', 'watermelon', 'banana', 'strawberry', 'grapes'];
   var funTypes = ['basketball', 'football', 'tennisball', 'baseball', 'diamond', 'snowflake', 'lightbulb', 'clock', 'cupcake', 'star', 'donut', 'icecream'];
   var allExtraTypes = fruitTypes.concat(funTypes);
-  var types = ['egg'];
-  // Extra objects from level 2+
-  if (level >= 2) types.push(allExtraTypes[Math.floor(rng() * allExtraTypes.length)]);
-  if (level >= 3) types.push(allExtraTypes[Math.floor(rng() * allExtraTypes.length)]);
+  var types = [];
+  // Egg only 15% of the time
+  if (rng() < 0.15) types.push('egg');
+  // Always add variety objects
+  types.push(allExtraTypes[Math.floor(rng() * allExtraTypes.length)]);
+  types.push(allExtraTypes[Math.floor(rng() * allExtraTypes.length)]);
   // New types by level
   if (level >= 4) types.push('bouncyBall');
   // Meteors start appearing at level 5 — steeper increase after level 10
