@@ -572,7 +572,7 @@
 
 <div id="gameOverScreen">
   <h2>Game Over</h2>
-  <p class="go-sub">3 crashes - back to Level 1</p>
+  <p class="go-sub" id="goSubtitle">3 crashes - back to Level 1</p>
   <div class="go-stats">
     <div><div class="stat-val" id="goLevel">-</div><div class="stat-label">Level Reached</div></div>
     <div><div class="stat-val" id="goCatches">-</div><div class="stat-label">Catches</div></div>
@@ -673,9 +673,9 @@
     <span style="opacity: 0.65; font-size: 11px;">Stars: &#9733;&#9733;&#9733; = No crashes, &#9733;&#9733; = 1 crash, &#9733; = 2+ crashes. Bonus for 15+ bounces!</span>
   </div>
   <div id="difficultySelector">
-    <button class="diff-btn" onclick="setDifficulty('easy')">Easy</button>
-    <button class="diff-btn active" onclick="setDifficulty('medium')">Medium</button>
-    <button class="diff-btn" onclick="setDifficulty('hard')">Hard</button>
+    <button class="diff-btn" onclick="setDifficulty('easy', this)">Easy</button>
+    <button class="diff-btn active" onclick="setDifficulty('medium', this)">Medium</button>
+    <button class="diff-btn" onclick="setDifficulty('hard', this)">Hard</button>
   </div>
   <button onclick="startGame()" style="position: relative; z-index: 210; padding: 16px 50px; font-size: 20px; box-shadow: 0 0 20px rgba(94,234,212,0.5);">Start Playing</button>
   <div id="seasonPassBar">
@@ -685,7 +685,13 @@
   </div>
   <div id="shopSection">
     <h3>Shop</h3>
+    <div id="shopTabs" style="display:flex; gap:8px; justify-content:center; margin-bottom:12px;">
+      <button class="diff-btn active" onclick="switchShopTab('upgrades')">Upgrades</button>
+      <button class="diff-btn" onclick="switchShopTab('cosmetics')">Cosmetics</button>
+      <button class="diff-btn" onclick="switchShopTab('skills')">Skills</button>
+    </div>
     <div id="powerups">
+      <div id="shopTabUpgrades">
       <button class="upgradeBtn" id="bounceHigherBtn" onclick="buyUpgrade('bounceHigher')" title="Objects bounce higher off your lines"><small id="bounceHigherLv">Lv:-</small> &#11014; Bounce Higher <small id="bounceHigherPrice">(75)</small></button>
       <p style="font-size: 11px; color: rgba(255,255,255,0.4); margin: -4px 0 4px 0; text-align: center;">Objects bounce higher off your lines</p>
       <button class="upgradeBtn" id="widerLinesBtn" onclick="buyUpgrade('widerLines')" title="Draw thicker lines — easier to hit"><small id="widerLinesLv">Lv:-</small> &#9135; Wider Lines <small id="widerLinesPrice">(75)</small></button>
@@ -710,7 +716,9 @@
       <div style="margin-top:16px; margin-bottom:8px; text-align:center; font-size:12px; text-transform:uppercase; letter-spacing:2px; opacity:0.4;">Portal Pairs</div>
       <button class="upgradeBtn" id="portalPairsBtn" onclick="buyPortalUpgrade()">&#128302; Portal Pairs <small id="portalPairsLv">Lv:0/3</small> <small id="portalPairsPrice">(200)</small></button>
       <p style="font-size: 11px; color: rgba(255,255,255,0.4); margin: -4px 0 4px 0; text-align: center;">Draw circles to place entry/exit portals</p>
-      <div style="margin-top:16px; margin-bottom:8px; text-align:center; font-size:12px; text-transform:uppercase; letter-spacing:2px; opacity:0.4;">Egg Skins</div>
+      </div>
+      <div id="shopTabCosmetics" style="display:none;">
+      <div style="margin-top:8px; margin-bottom:8px; text-align:center; font-size:12px; text-transform:uppercase; letter-spacing:2px; opacity:0.4;">Egg Skins</div>
       <button class="upgradeBtn" id="galaxySkinBtn" onclick="buyEggSkin('galaxy')">&#127756; Galaxy Egg <small id="galaxySkinPrice">(50)</small></button>
       <button class="upgradeBtn" id="goldenSkinSkinBtn" onclick="buyEggSkin('goldenSkin')">&#11088; Golden Egg <small id="goldenSkinSkinPrice">(50)</small></button>
       <button class="upgradeBtn" id="neonSkinBtn" onclick="buyEggSkin('neon')">&#128154; Neon Egg <small id="neonSkinPrice">(50)</small></button>
@@ -721,10 +729,13 @@
       <button class="upgradeBtn" id="neonCityBtn" onclick="buyBgTheme('neonCity')">&#127747; Neon City <small id="neonCityPrice">(200)</small></button>
       <button class="upgradeBtn" id="underwaterBtn" onclick="buyBgTheme('underwater')">&#127754; Underwater <small id="underwaterPrice">(200)</small></button>
       <button class="upgradeBtn" id="autumnBtn" onclick="buyBgTheme('autumn')">&#127810; Autumn <small id="autumnPrice">(200)</small></button>
+      </div>
+      <div id="shopTabSkills" style="display:none;">
+      </div>
     </div>
     <p id="tokenWarning" style="color: #ff6b6b; font-size: 13px; font-weight: bold; min-height: 20px; margin-top: 8px; opacity: 0; transition: opacity 1s ease;">&nbsp;</p>
   </div>
-  <div id="skillTreeSection">
+  <div id="skillTreeSection" style="display:none;">
     <h3>Skill Tree</h3>
     <div class="skill-tree-paths" id="skillTreePaths"></div>
   </div>
@@ -891,7 +902,9 @@ var tutorialSteps = [
   { icon: '\u270D', title: 'Draw Lines', text: 'Tap and drag to draw lines.<br>Objects will bounce off your lines!' },
   { icon: '\u2B50', title: 'Safe Zones', text: 'Guide objects into the glowing<br>Safe Zones on the walls to catch them!' },
   { icon: '\u{1F4A5}', title: "Don't Crash!", text: "Don't let objects hit the floor!<br>3 crashes and it's game over." },
-  { icon: '\u{1F3AF}', title: 'Earn Rewards', text: 'Every 5 bounces earns Plummet Tokens.<br>Spend them in the shop to upgrade!' }
+  { icon: '\u{1F3AF}', title: 'Earn Rewards', text: 'Every 5 bounces earns Plummet Tokens.<br>Spend them in the shop to upgrade!' },
+  { icon: '\uD83D\uDD04', title: 'Gravity Flip', text: 'Draw a circle gesture to create a<br>gravity flip zone that reverses gravity!' },
+  { icon: '\uD83C\uDF00', title: 'Portal Pairs', text: 'Buy portals in the shop, then draw circles<br>to place entry and exit portals!' }
 ];
 
 // Time freeze power-up (item 9)
@@ -1237,8 +1250,13 @@ function openAchievements() {
     var a = achievements[i];
     var earned = earnedAchievements.indexOf(a.id) >= 0;
     var div = document.createElement('div');
-    div.style.cssText = 'width:90px; height:90px; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; text-align:center; border:2px solid ' + (earned ? '#fbbf24' : 'rgba(255,255,255,0.15)') + '; background:' + (earned ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.03)') + '; opacity:' + (earned ? '1' : '0.4') + ';';
-    div.innerHTML = '<span style="font-size:28px;">' + (earned ? a.icon : '\uD83D\uDD12') + '</span><span>' + a.name + '</span>';
+    div.style.cssText = 'width:90px; height:90px; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11px; text-align:center; border:2px solid ' + (earned ? '#fbbf24' : 'rgba(255,255,255,0.15)') + '; background:' + (earned ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.03)') + '; opacity:' + (earned ? '1' : '0.5') + ';';
+    if (earned) {
+      div.innerHTML = '<span style="font-size:28px;">' + a.icon + '</span><span>' + a.name + '</span>';
+    } else {
+      // Show grayed icon + hint description instead of lock
+      div.innerHTML = '<span style="font-size:28px; filter:grayscale(1) brightness(0.5);">' + a.icon + '</span><span style="font-size:9px; line-height:1.2; opacity:0.7;">' + a.desc + '</span>';
+    }
     list.appendChild(div);
   }
   document.getElementById('achievementsScreen').style.display = 'flex';
@@ -1334,6 +1352,9 @@ function startBgMusic() {
   // Dark minor key melodies — alternate every 16 notes
   var melody1 = [165, 196, 220, 196, 165, 147, 131, 147, 175, 208, 233, 208, 175, 156, 139, 156];
   var melody2 = [147, 175, 196, 220, 196, 175, 165, 147, 156, 185, 208, 220, 208, 185, 165, 156];
+  // Bright major key melodies for dawn/day levels (1-8)
+  var melody3 = [262, 294, 330, 349, 392, 349, 330, 294, 262, 330, 392, 440, 392, 330, 294, 262];
+  var melody4 = [330, 349, 392, 440, 494, 440, 392, 349, 330, 392, 440, 494, 440, 392, 349, 330];
   var noteIdx = 0;
   var melodySwitch = 0;
   function melodyTick() {
@@ -1341,7 +1362,13 @@ function startBgMusic() {
     var targetGain = (muted || !running || paused) ? 0 : 1;
     musicGain += (targetGain - musicGain) * 0.08;
     if (musicGain >= 0.005) {
-      var melody = (melodySwitch % 2 === 0) ? melody1 : melody2;
+      // Use bright melodies for dawn/day (levels 1-8), dark for later levels
+      var melody;
+      if (level <= 8) {
+        melody = (melodySwitch % 2 === 0) ? melody3 : melody4;
+      } else {
+        melody = (melodySwitch % 2 === 0) ? melody1 : melody2;
+      }
       // Pitch shift when combo multiplier is 2x+ (item 21)
       var pitchShift = comboMultiplier >= 2 ? 1 + (comboMultiplier - 1) * 0.05 : 1;
       // Item 20: Dynamic music — adjust based on active object count
@@ -1425,6 +1452,12 @@ function sfxCatchZone() {
   playTone(880, 0.1, 'sine', 0.10);
   setTimeout(function() { playTone(1100, 0.1, 'sine', 0.10); }, 60);
   setTimeout(function() { playTone(1400, 0.15, 'sine', 0.10); }, 120);
+}
+
+// Spawn whoosh sound — subtle descending tone when objects appear
+function sfxSpawn() {
+  playTone(800, 0.08, 'sine', 0.05);
+  setTimeout(function() { playTone(500, 0.06, 'sine', 0.03); }, 40);
 }
 
 // Line drawing swish sound
@@ -1924,6 +1957,16 @@ function addLine(x1, y1, x2, y2) {
   var dx = x2 - x1, dy = y2 - y1;
   var len = Math.sqrt(dx * dx + dy * dy);
   if (len > 15) {
+    // Limit active lines to 4 max
+    var activeLineCount = 0;
+    for (var ali = 0; ali < lines.length; ali++) { if (!lines[ali].done) activeLineCount++; }
+    if (activeLineCount >= 4) {
+      // Remove oldest active line
+      for (var rli = 0; rli < lines.length; rli++) {
+        if (!lines[rli].done) { lines[rli].done = true; break; }
+      }
+      floatText('Max lines!', (x1 + x2) / 2, (y1 + y2) / 2 - 20, '#fbbf24', 14);
+    }
     lines.push({ x1: x1, y1: y1, x2: x2, y2: y2, born: Date.now() });
     sfxLine();
     // Line creation particles (item 38)
@@ -2040,6 +2083,7 @@ function spawnObj() {
     if (!hasBoss && rng() < 0.3) {
       isBoss = true;
       type = 'egg'; // boss is always an egg type
+      sfxBossArrival();
     }
   }
   var isWindUp = (type === 'windUp');
@@ -2067,6 +2111,7 @@ function spawnObj() {
     windUpPhase: rng() * Math.PI * 2,
     shrunk: false
   });
+  sfxSpawn();
 }
 
 // Line bounce check
@@ -2208,15 +2253,8 @@ function updateHUD() {
   document.getElementById('homeTokenCount').textContent = fluffTokens;
 }
 
-document.getElementById('backBtn').onclick = function() {
-  running = false;
-  paused = false;
-  stopBgMusic();
-  // Track time played
-  if (sessionStartTime > 0) {
-    gameStats.totalTimePlayed += Math.floor((Date.now() - sessionStartTime) / 1000);
-    saveProgress();
-  }
+// Shared game state reset — called from backBtn, quitToHome, dismissGameOver, closeTutorial, playAgain
+function resetGameState() {
   lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
   bestStreakThisRun = 0; tokensThisRun = 0;
   shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
@@ -2234,6 +2272,18 @@ document.getElementById('backBtn').onclick = function() {
   bgBirds = []; bgShootingStars = [];
   objects = []; lines = []; particles = []; texts = [];
   spawnTimer = 800;
+}
+
+document.getElementById('backBtn').onclick = function() {
+  running = false;
+  paused = false;
+  stopBgMusic();
+  // Track time played
+  if (sessionStartTime > 0) {
+    gameStats.totalTimePlayed += Math.floor((Date.now() - sessionStartTime) / 1000);
+    saveProgress();
+  }
+  resetGameState();
   document.getElementById('pauseOverlay').classList.remove('show');
   document.getElementById('startScreen').classList.remove('gone');
   document.getElementById('shieldBtn').style.display = 'none';
@@ -2281,23 +2331,7 @@ function quitToHome() {
     gameStats.totalTimePlayed += Math.floor((Date.now() - sessionStartTime) / 1000);
     saveProgress();
   }
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
-  bestStreakThisRun = 0; tokensThisRun = 0;
-  shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
-  activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
-  comboMultiplier = 1; comboMultiplierTimer = 0;
-  bgThemePrev = null; bgThemeCurrent = null; bgThemeTransition = 0;
-  timeFreezeTimer = 0; deathSlowmoTimer = 0; deathSlowmoActive = false;
-  goldenZone = null; goldenZoneSpawnTimer = 30000;
-  countdownTimer = 0; countdownPhase = 0;
-  cameraZoom = 1.0; cameraZoomTarget = 1.0; cameraZoomTimer = 0;
-  comboFlashTimer = 0; nearMissFlash = 0; lastCatchType = ''; sameTypeComboCount = 0;
-  gravityFlipZone = null; portalPairs = []; portalPendingEntry = null;
-  shrinkRayTimer = 0; catchSlowmoTimer = 0; catchSlowmoFactor = 1.0;
-  safeZonePhase = 0;
-  bgBirds = []; bgShootingStars = [];
-  objects = []; lines = []; particles = []; texts = [];
-  spawnTimer = 800;
+  resetGameState();
   document.getElementById('pauseOverlay').classList.remove('show');
   document.getElementById('startScreen').classList.remove('gone');
   document.getElementById('shieldBtn').style.display = 'none';
@@ -2312,18 +2346,9 @@ function closeTutorial() {
   hasSeenTutorial = true;
   tutorialStepIdx = 0;
   running = true;
-  bgThemePrev = null; bgThemeCurrent = null; bgThemeTransition = 0;
-  shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
-  timeFreezeTimer = 0; deathSlowmoTimer = 0; deathSlowmoActive = false;
-  goldenZone = null; goldenZoneSpawnTimer = 30000 + Math.random() * 15000;
-  lastCatchType = ''; sameTypeComboCount = 0;
-  // New mechanics resets
-  safeZonePhase = 0;
-  gravityFlipZone = null;
+  resetGameState();
+  goldenZoneSpawnTimer = 30000 + Math.random() * 15000;
   lastTapTime = 0; lastTapX = 0; lastTapY = 0;
-  portalPairs = []; portalPendingEntry = null;
-  shrinkRayTimer = 0;
-  catchSlowmoTimer = 0; catchSlowmoFactor = 1.0;
   // Countdown (item 20)
   countdownTimer = 1600;
   countdownPhase = 3;
@@ -2443,6 +2468,8 @@ function triggerGameOver() {
   goStreakEl.textContent = bestStreakThisRun;
   goStreakEl.style.color = bestStreakThisRun > 10 ? '#fbbf24' : bestStreakThisRun > 5 ? '#c0c0c0' : '';
   goStreakEl.style.webkitTextFillColor = bestStreakThisRun > 10 ? '#fbbf24' : bestStreakThisRun > 5 ? '#c0c0c0' : '';
+  // Dynamic game over subtitle
+  document.getElementById('goSubtitle').textContent = strikes + ' crashes - reached Level ' + level;
   document.getElementById('gameOverScreen').classList.add('show');
   // Reset share button text
   document.getElementById('shareScoreBtn').textContent = '\uD83D\uDD17 Share Score';
@@ -2450,23 +2477,7 @@ function triggerGameOver() {
 
 function dismissGameOver() {
   document.getElementById('gameOverScreen').classList.remove('show');
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
-  bestStreakThisRun = 0; tokensThisRun = 0;
-  activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
-  comboMultiplier = 1; comboMultiplierTimer = 0;
-  shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
-  bgThemePrev = null; bgThemeCurrent = null; bgThemeTransition = 0;
-  timeFreezeTimer = 0; deathSlowmoTimer = 0; deathSlowmoActive = false;
-  goldenZone = null; goldenZoneSpawnTimer = 30000;
-  countdownTimer = 0; countdownPhase = 0;
-  cameraZoom = 1.0; cameraZoomTarget = 1.0; cameraZoomTimer = 0;
-  comboFlashTimer = 0; nearMissFlash = 0; lastCatchType = ''; sameTypeComboCount = 0;
-  gravityFlipZone = null; portalPairs = []; portalPendingEntry = null;
-  shrinkRayTimer = 0; catchSlowmoTimer = 0; catchSlowmoFactor = 1.0;
-  safeZonePhase = 0;
-  bgBirds = []; bgShootingStars = [];
-  objects = []; lines = []; particles = []; texts = [];
-  spawnTimer = 800;
+  resetGameState();
   document.getElementById('startScreen').classList.remove('gone');
   updatePrestigeBtn();
   initLineColorSelector();
@@ -2474,6 +2485,8 @@ function dismissGameOver() {
 }
 
 function onCatch(obj) {
+  // Haptic feedback on catch (shorter than crash)
+  if (navigator.vibrate) try { navigator.vibrate(50); } catch(e) {}
   // Start catch animation instead of instant removal
   if (!obj.catching) {
     obj.catching = true;
@@ -2786,6 +2799,10 @@ function initDemo() {
 }
 initDemo();
 
+// Demo lines for home screen
+var demoLines = [];
+var demoLineTimer = 0;
+
 function drawDemoScreen(now) {
   // Background
   var grad = ctx.createLinearGradient(0, 0, 0, CH);
@@ -2794,6 +2811,33 @@ function drawDemoScreen(now) {
   grad.addColorStop(1, '#99f6e4');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CW, CH);
+
+  // Manage demo lines — appear and disappear periodically
+  demoLineTimer++;
+  if (demoLineTimer % 180 === 0 && demoLines.length < 3) {
+    var lx1 = CW * 0.2 + Math.random() * CW * 0.3;
+    var ly1 = CH * 0.4 + Math.random() * CH * 0.3;
+    var lx2 = lx1 + 60 + Math.random() * 80;
+    var ly2 = ly1 + (Math.random() - 0.5) * 40;
+    demoLines.push({ x1: lx1, y1: ly1, x2: lx2, y2: ly2, life: 240 });
+  }
+  // Draw and update demo lines
+  for (var dli = demoLines.length - 1; dli >= 0; dli--) {
+    var dl = demoLines[dli];
+    dl.life--;
+    if (dl.life <= 0) { demoLines.splice(dli, 1); continue; }
+    var dlAlpha = dl.life < 30 ? dl.life / 30 : dl.life > 210 ? (240 - dl.life) / 30 : 1;
+    ctx.save();
+    ctx.globalAlpha = 0.5 * dlAlpha;
+    ctx.strokeStyle = '#5eead4';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(dl.x1, dl.y1);
+    ctx.lineTo(dl.x2, dl.y2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // Update and draw demo objects bouncing around
   for (var i = 0; i < demoObjects.length; i++) {
@@ -2807,6 +2851,34 @@ function drawDemoScreen(now) {
     if (obj.x > CW - 30) { obj.x = CW - 30; obj.vx = -Math.abs(obj.vx); }
     if (obj.y < 30) { obj.y = 30; obj.vy = Math.abs(obj.vy); }
     if (obj.y > CH - 30) { obj.y = CH - 30; obj.vy = -Math.abs(obj.vy) * 0.9; }
+
+    // Check collision with demo lines
+    for (var dli2 = 0; dli2 < demoLines.length; dli2++) {
+      var dl2 = demoLines[dli2];
+      var dlx = dl2.x2 - dl2.x1, dly = dl2.y2 - dl2.y1;
+      var dlLen = Math.sqrt(dlx * dlx + dly * dly);
+      if (dlLen < 1) continue;
+      var dnx = -dly / dlLen, dny = dlx / dlLen;
+      var dpx = obj.x - dl2.x1, dpy = obj.y - dl2.y1;
+      var dot = dpx * dlx / dlLen + dpy * dly / dlLen;
+      if (dot < 0 || dot > dlLen) continue;
+      var dist = dpx * dnx + dpy * dny;
+      if (Math.abs(dist) < 16 && obj.vy > 0) {
+        obj.vy = -Math.abs(obj.vy) * 1.1;
+        obj.vx += (Math.random() - 0.5) * 0.5;
+        // Bounce particles
+        for (var bp = 0; bp < 5; bp++) {
+          demoParticles.push({
+            x: obj.x, y: obj.y,
+            vx: (Math.random() - 0.5) * 2,
+            vy: -1 - Math.random() * 1.5,
+            life: 0.5,
+            color: '#5eead4',
+            size: 2 + Math.random() * 3
+          });
+        }
+      }
+    }
 
     // Trail particles
     if (frameCount % 4 === 0) {
@@ -2823,7 +2895,7 @@ function drawDemoScreen(now) {
 
     // Draw object
     ctx.save();
-    ctx.globalAlpha = 0.4;
+    ctx.globalAlpha = 0.6;
     ctx.translate(obj.x, obj.y);
     if (obj.type === 'egg') {
       ctx.beginPath();
@@ -3847,9 +3919,15 @@ function loop(now) {
 
       ctx.save();
 
+      // Subtle glow for safe zone
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#5eead4';
+
       // Solid bar fill
       ctx.fillStyle = 'rgba(' + zoneMainR + ', ' + pulse + ')';
       ctx.fillRect(zx, zd.y, wallW, zd.h);
+
+      ctx.shadowBlur = 0;
 
       // Edge line
       ctx.strokeStyle = 'rgba(' + zoneHighR + ', ' + (0.5 + pulse * 0.5) + ')';
@@ -4526,22 +4604,31 @@ function loop(now) {
         ctx.arc(frontX, frontY, 10, 0, Math.PI * 2);
         ctx.fill();
       } else if (obj.type === 'bouncyBall') {
-        // Glass marble — simplified
-        // Base sphere — flat amber
-        ctx.fillStyle = '#c87828';
+        // Glass marble — radial gradient for depth
+        var marbleGrad = ctx.createRadialGradient(-4, -5, 2, 2, 3, 15);
+        marbleGrad.addColorStop(0, '#c8e4ff');
+        marbleGrad.addColorStop(0.3, '#6ba8e0');
+        marbleGrad.addColorStop(0.7, '#2563eb');
+        marbleGrad.addColorStop(1, '#1e3a5f');
+        ctx.fillStyle = marbleGrad;
         ctx.beginPath();
         ctx.arc(0, 0, 13, 0, Math.PI * 2);
         ctx.fill();
         // Edge highlight
-        ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(0, 0, 12.5, 0, Math.PI * 2);
         ctx.stroke();
-        // Specular highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        // Bright specular highlight (top-left)
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
         ctx.beginPath();
         ctx.ellipse(-4, -5, 3, 4, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // Subtle reflected light (bottom-right)
+        ctx.fillStyle = 'rgba(180,220,255,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(3, 5, 4, 2.5, 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -4583,8 +4670,11 @@ function loop(now) {
       }
 
       // Item 10: Decoy object rendering (looks like egg but translucent)
+      // Opacity scales with level: 0.6 at level 5, up to 0.9 at level 15+
       if (obj.isDecoy) {
-        ctx.globalAlpha = (ctx.globalAlpha || 1) * 0.5;
+        var decoyOpacity = Math.min(0.9, 0.6 + (level - 5) * 0.03);
+        if (decoyOpacity < 0.4) decoyOpacity = 0.4;
+        ctx.globalAlpha = (ctx.globalAlpha || 1) * decoyOpacity;
         // Same as egg rendering but faded
         ctx.beginPath();
         ctx.ellipse(0, 0, 13, 17, 0, 0, Math.PI * 2);
@@ -4942,13 +5032,16 @@ function loop(now) {
       ctx.restore();
     }
 
-    // Screen border flash on catch (green) / crash (red)
+    // Screen border flash on catch (green) with glow / crash (red)
     if (catchFlashTimer > 0) {
       ctx.save();
       ctx.globalAlpha = (catchFlashTimer / 10) * 0.4;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#66bb6a';
       ctx.strokeStyle = '#66bb6a';
       ctx.lineWidth = 6;
       ctx.strokeRect(3, 3, CW - 6, CH - 6);
+      ctx.shadowBlur = 0;
       ctx.restore();
       catchFlashTimer--;
     }
@@ -5023,22 +5116,7 @@ function loop(now) {
 // Play Again button (item 19)
 function playAgain() {
   document.getElementById('gameOverScreen').classList.remove('show');
-  lives = maxLives; lifeFrac = 0; strikes = 0; combo = 0; level = 1; totalCatches = 0; bounceCount = 0; catchStreak = 0; wind = 0; levelCrashes = 0; levelBounces = 0; levelTransitionPhase = 0; levelTransitionAlpha = 0; levelTransitionTimer = 0; catchFlashTimer = 0; crashFlashTimer = 0; levelMessageTimer = 0;
-  bestStreakThisRun = 0; tokensThisRun = 0;
-  activeEffects.shield = 0; activeEffects.slowmo = 0; activeEffects.doubleTokens = 0; activeEffects.magnet = 0;
-  comboMultiplier = 1; comboMultiplierTimer = 0;
-  shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
-  timeFreezeTimer = 0; deathSlowmoTimer = 0; deathSlowmoActive = false;
-  goldenZone = null; goldenZoneSpawnTimer = 30000;
-  comboFlashTimer = 0; nearMissFlash = 0; lastCatchType = ''; sameTypeComboCount = 0;
-  bgBirds = []; bgShootingStars = [];
-  objects = []; lines = []; particles = []; texts = [];
-  spawnTimer = 100;
-  bgThemePrev = null; bgThemeCurrent = null; bgThemeTransition = 0;
-  cameraZoom = 1.0; cameraZoomTarget = 1.0; cameraZoomTimer = 0;
-  gravityFlipZone = null; portalPairs = []; portalPendingEntry = null;
-  shrinkRayTimer = 0; catchSlowmoTimer = 0; catchSlowmoFactor = 1.0;
-  safeZonePhase = 0;
+  resetGameState();
   // Countdown timer (item 20)
   countdownTimer = 1600;
   countdownPhase = 3;
@@ -5900,12 +5978,34 @@ function toggleOneHand(on) {
 }
 
 // 23. Difficulty selector
-function setDifficulty(diff) {
+function setDifficulty(diff, btn) {
   gameDifficulty = diff;
-  var btns = document.querySelectorAll('.diff-btn');
+  var btns = document.querySelectorAll('.diff-btn[onclick*="setDifficulty"]');
   for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
   saveProgress();
+}
+
+// Shop tab switching
+function switchShopTab(tab) {
+  var tabUpgrades = document.getElementById('shopTabUpgrades');
+  var tabCosmetics = document.getElementById('shopTabCosmetics');
+  var tabSkills = document.getElementById('shopTabSkills');
+  var skillTreeSection = document.getElementById('skillTreeSection');
+  // Hide all
+  tabUpgrades.style.display = 'none';
+  tabCosmetics.style.display = 'none';
+  tabSkills.style.display = 'none';
+  skillTreeSection.style.display = 'none';
+  // Show selected
+  if (tab === 'upgrades') { tabUpgrades.style.display = ''; }
+  else if (tab === 'cosmetics') { tabCosmetics.style.display = ''; }
+  else if (tab === 'skills') { skillTreeSection.style.display = ''; tabSkills.style.display = ''; }
+  // Update tab button active state
+  var tabBtns = document.querySelectorAll('#shopTabs .diff-btn');
+  for (var i = 0; i < tabBtns.length; i++) { tabBtns[i].classList.remove('active'); }
+  var tabMap = { 'upgrades': 0, 'cosmetics': 1, 'skills': 2 };
+  if (tabBtns[tabMap[tab]]) tabBtns[tabMap[tab]].classList.add('active');
 }
 
 // 24. High-contrast colorblind mode
@@ -5941,6 +6041,14 @@ function sfxLineErase() {
   playTone(300, 0.1, 'sawtooth', 0.06);
   playTone(150, 0.15, 'square', 0.04);
 }
+function sfxBossArrival() {
+  // Dramatic ascending chord fanfare
+  playTone(220, 0.3, 'triangle', 0.10);
+  setTimeout(function() { playTone(277, 0.25, 'triangle', 0.10); }, 100);
+  setTimeout(function() { playTone(330, 0.25, 'triangle', 0.10); }, 200);
+  setTimeout(function() { playTone(440, 0.35, 'triangle', 0.12); }, 300);
+  setTimeout(function() { playTone(550, 0.2, 'sine', 0.08); }, 400);
+}
 function sfxBossHit() {
   playTone(150, 0.2, 'sawtooth', 0.10);
   playTone(200, 0.15, 'triangle', 0.08);
@@ -5970,23 +6078,9 @@ function startGame() {
     return;
   }
   running = true;
-  spawnTimer = 100;
   lastTime = 0;
-  bgThemePrev = null; bgThemeCurrent = null; bgThemeTransition = 0;
-  comboMultiplier = 1; comboMultiplierTimer = 0;
-  shieldTimeLeft = 0; shieldUsed = false; shieldActive = false;
-  timeFreezeTimer = 0;
-  deathSlowmoTimer = 0; deathSlowmoActive = false;
-  goldenZone = null; goldenZoneSpawnTimer = 30000 + Math.random() * 15000;
-  lastCatchType = ''; sameTypeComboCount = 0;
-  // New feature resets
-  gravityFlipZone = null;
-  portalPairs = [];
-  portalPendingEntry = null;
-  shrinkRayTimer = 0;
-  catchSlowmoTimer = 0;
-  catchSlowmoFactor = 1.0;
-  safeZonePhase = 0;
+  resetGameState();
+  goldenZoneSpawnTimer = 30000 + Math.random() * 15000;
   lastTapTime = 0; lastTapX = 0; lastTapY = 0;
   // Apply skill tree luck3 bonus life
   if (skillTree.luck[2].owned && level >= 10) maxLives = 4;
@@ -6048,10 +6142,10 @@ updateSeasonPassUI();
 document.getElementById('portalPairsLv').textContent = 'Lv:' + portalUpgradeLevel + '/3';
 if (portalUpgradeLevel >= 3) document.getElementById('portalPairsPrice').textContent = '(MAX)';
 // Set difficulty buttons
-var diffBtns2 = document.querySelectorAll('.diff-btn');
+var diffBtns2 = document.querySelectorAll('.diff-btn[onclick*="setDifficulty"]');
 for (var dbi = 0; dbi < diffBtns2.length; dbi++) {
   diffBtns2[dbi].classList.remove('active');
-  if (diffBtns2[dbi].textContent.toLowerCase() === gameDifficulty) diffBtns2[dbi].classList.add('active');
+  if (diffBtns2[dbi].textContent.trim().toLowerCase() === gameDifficulty) diffBtns2[dbi].classList.add('active');
 }
 requestAnimationFrame(loop);
 
