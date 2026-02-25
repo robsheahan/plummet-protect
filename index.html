@@ -571,17 +571,18 @@
 </div>
 
 <div id="gameOverScreen">
-  <h2>Game Over</h2>
-  <p class="go-sub" id="goSubtitle">3 crashes - back to Level 1</p>
-  <div class="go-stats">
+  <canvas id="goParticleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;"></canvas>
+  <h2 style="position:relative;z-index:1;">Game Over</h2>
+  <p class="go-sub" id="goSubtitle" style="position:relative;z-index:1;">3 crashes - back to Level 1</p>
+  <div class="go-stats" style="position:relative;z-index:1;">
     <div><div class="stat-val" id="goLevel">-</div><div class="stat-label">Level Reached</div></div>
     <div><div class="stat-val" id="goCatches">-</div><div class="stat-label">Catches</div></div>
     <div><div class="stat-val" id="goTokens">-</div><div class="stat-label">Tokens Earned</div></div>
     <div><div class="stat-val" id="goStreak">-</div><div class="stat-label">Best Streak</div></div>
   </div>
-  <button onclick="playAgain()">Play Again</button>
-  <button id="shareScoreBtn" onclick="shareScore()" style="background: rgba(255,255,255,0.1); color: #fff; border: 2px solid rgba(255,255,255,0.3);">&#128279; Share Score</button>
-  <button onclick="dismissGameOver()" style="background: rgba(255,255,255,0.1); color: #fff; border: 2px solid rgba(255,255,255,0.3);">Back to Menu</button>
+  <button onclick="playAgain()" style="position:relative;z-index:1;">Play Again</button>
+  <button id="shareScoreBtn" onclick="shareScore()" style="position:relative;z-index:1;background: rgba(255,255,255,0.1); color: #fff; border: 2px solid rgba(255,255,255,0.3);">&#128279; Share Score</button>
+  <button onclick="dismissGameOver()" style="position:relative;z-index:1;background: rgba(255,255,255,0.1); color: #fff; border: 2px solid rgba(255,255,255,0.3);">Back to Menu</button>
 </div>
 
 <div id="tutorial">
@@ -842,6 +843,10 @@ var objects = [];
 var lines = [];
 var particles = [];
 var texts = [];
+var shockwaves = [];
+var gameOverParticles = [];
+var gameOverDelayTimer = 0; // ms remaining for slow-mo death effect
+var gameOverDelayObj = null; // crash object location for delayed game over
 var frameCount = 0;
 var shakeAmount = 0;
 var flashes = [];
@@ -1341,6 +1346,21 @@ function sfxLevelUp() {
   setTimeout(function() { playTone(1047, 0.25, 'sine', 0.14); }, 300);
 }
 
+// Big level-up fanfare — 6-note triumphant ascending arpeggio, louder
+function sfxLevelUpBig() {
+  playTone(523, 0.18, 'sine', 0.16);       // C5
+  playTone(523, 0.18, 'triangle', 0.10);    // C5 harmony layer
+  setTimeout(function() { playTone(659, 0.16, 'sine', 0.16); }, 80);   // E5
+  setTimeout(function() { playTone(784, 0.16, 'sine', 0.16); }, 160);  // G5
+  setTimeout(function() { playTone(1047, 0.20, 'sine', 0.18); }, 260); // C6
+  setTimeout(function() { playTone(1319, 0.22, 'sine', 0.16); }, 380); // E6
+  setTimeout(function() {
+    playTone(1568, 0.35, 'sine', 0.18);    // G6 — final sustained note
+    playTone(1047, 0.35, 'triangle', 0.10); // C6 harmony
+    playTone(784, 0.35, 'triangle', 0.08);  // G5 harmony
+  }, 500);
+}
+
 var bgMusicInterval = null;
 var bgBassInterval = null;
 var bgArpInterval = null;
@@ -1471,6 +1491,27 @@ function sfxGameOver() {
   setTimeout(function() { playTone(349, 0.3, 'sawtooth', 0.10); }, 150);
   setTimeout(function() { playTone(294, 0.3, 'sawtooth', 0.10); }, 300);
   setTimeout(function() { playTone(220, 0.4, 'sawtooth', 0.10); }, 450);
+}
+
+// Dramatic game over — 10-note descending minor chord with dissonance, longer
+function sfxGameOverBig() {
+  playTone(880, 0.25, 'sawtooth', 0.14);     // A5 — opening hit
+  playTone(880, 0.25, 'square', 0.06);        // A5 — buzz layer
+  setTimeout(function() { playTone(831, 0.25, 'sawtooth', 0.12); }, 120);  // Ab5
+  setTimeout(function() { playTone(740, 0.28, 'sawtooth', 0.12); }, 240);  // F#5
+  setTimeout(function() { playTone(659, 0.28, 'sawtooth', 0.12); }, 360);  // E5
+  setTimeout(function() { playTone(587, 0.30, 'sawtooth', 0.13); }, 500);  // D5
+  setTimeout(function() {
+    playTone(523, 0.30, 'sawtooth', 0.13);   // C5
+    playTone(554, 0.20, 'square', 0.05);      // C#5 dissonance
+  }, 650);
+  setTimeout(function() { playTone(440, 0.35, 'sawtooth', 0.13); }, 800);  // A4
+  setTimeout(function() { playTone(349, 0.35, 'sawtooth', 0.12); }, 950);  // F4
+  setTimeout(function() {
+    playTone(262, 0.50, 'sawtooth', 0.14);   // C4 — deep final
+    playTone(277, 0.40, 'square', 0.06);      // C#4 — dissonant rattle
+    playTone(131, 0.60, 'triangle', 0.10);    // C3 — sub bass rumble
+  }, 1100);
 }
 
 // Combo ready sound — quick rising tone at combo 3
@@ -2277,7 +2318,8 @@ function resetGameState() {
   shrinkRayTimer = 0; catchSlowmoTimer = 0; catchSlowmoFactor = 1.0;
   safeZonePhase = 0;
   bgBirds = []; bgShootingStars = [];
-  objects = []; lines = []; particles = []; texts = [];
+  objects = []; lines = []; particles = []; texts = []; shockwaves = []; gameOverParticles = [];
+  gameOverDelayTimer = 0; gameOverDelayObj = null;
   spawnTimer = 800;
 }
 
@@ -2442,14 +2484,40 @@ function onCrash(obj) {
   sameTypeComboCount = 0;
   updateHUD();
   if (strikes >= 3) {
-    triggerGameOver();
+    // Slow-motion death effect — delay game over by 500ms
+    gameOverDelayTimer = 500;
+    gameOverDelayObj = { x: obj.x, y: obj.y };
+    shakeAmount = 30; // intense screen shake
+    cameraZoomTarget = 1.1; // dramatic zoom
+    cameraZoomTimer = 800;
+    // Big explosion of red/orange particles from crash location
+    var deathColors = ['#ff6b6b', '#ef4444', '#f97316', '#fb923c', '#fbbf24', '#dc2626', '#ff0000', '#ff4500'];
+    for (var dp = 0; dp < 60; dp++) {
+      var dpAngle = (dp / 60) * Math.PI * 2 + (Math.random() - 0.5) * 0.4;
+      var dpSpeed = 2 + Math.random() * 6;
+      particles.push({
+        x: obj.x + (Math.random() - 0.5) * 10, y: obj.y + (Math.random() - 0.5) * 10,
+        vx: Math.cos(dpAngle) * dpSpeed,
+        vy: Math.sin(dpAngle) * dpSpeed - 1,
+        life: 1.5 + Math.random() * 1.0,
+        color: deathColors[Math.floor(Math.random() * deathColors.length)],
+        size: 3 + Math.random() * 6,
+        shape: ['circle', 'star', 'triangle'][Math.floor(Math.random() * 3)],
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.2
+      });
+    }
+    // Red shockwave from crash
+    shockwaves.push({ x: obj.x, y: obj.y, radius: 5, maxRadius: Math.max(CW, CH) * 0.5, life: 0.8, color: '#ff6b6b', innerColor: '#ff0000' });
+    // Intense red screen flash
+    crashFlashTimer = 25;
+    sfxGameOverBig();
   }
 }
 
 function triggerGameOver() {
   running = false;
   stopBgMusic();
-  sfxGameOver();
   document.getElementById('shieldBtn').style.display = 'none';
   // Update persistent bests and stats
   if (level > bestLevel) bestLevel = level;
@@ -2464,6 +2532,22 @@ function triggerGameOver() {
   // Item 15: Add leaderboard entry
   addLeaderboardEntry(level, totalCatches, tokensThisRun);
   saveProgress();
+  // Populate game over falling particle confetti
+  gameOverParticles = [];
+  for (var gop = 0; gop < 80; gop++) {
+    gameOverParticles.push({
+      x: Math.random() * CW,
+      y: -20 - Math.random() * CH, // start above screen
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: 0.5 + Math.random() * 1.5,
+      size: 3 + Math.random() * 5,
+      color: ['#ff6b6b', '#fbbf24', '#5eead4', '#a78bfa', '#f472b6', '#60a5fa', '#fb923c'][Math.floor(Math.random() * 7)],
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.08,
+      drift: (Math.random() - 0.5) * 0.02, // gentle horizontal drift
+      shape: ['circle', 'square', 'star'][Math.floor(Math.random() * 3)]
+    });
+  }
   // Show game over screen with stats and coloring
   var goLevelEl = document.getElementById('goLevel');
   goLevelEl.textContent = level;
@@ -2714,34 +2798,40 @@ function onCatch(obj) {
     levelCrashes = 0;
     levelBounces = 0;
     spawnPauseTimer = 2500; // 2.5 second breather before new objects spawn
-    sfxLevelUp();
-    // Level-up fanfare
-    levelUpFlash = 20;
-    levelUpBanner = 120;
+    sfxLevelUpBig();
+    // Level-up fanfare — EXCITING
+    levelUpFlash = 30; // longer flash
+    levelUpBanner = 150; // longer banner
     levelUpBannerLevel = level;
+    shakeAmount = 20; // strong screen shake
     // Level transition — no black screen, just keep playing
     // Encouraging message between levels
     levelMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
     levelMessageTimer = 120; // display for ~2 seconds
     // Camera zoom on level transition (item 19)
-    cameraZoomTarget = 1.05;
-    cameraZoomTimer = 1000;
+    cameraZoomTarget = 1.08;
+    cameraZoomTimer = 1200;
     // Milestone check (item 14)
     checkMilestones();
-    // Big burst of particles at center
-    for (var lb = 0; lb < 30; lb++) {
-      var lbAngle = (lb / 30) * Math.PI * 2;
-      var lbSpeed = 2 + Math.random() * 4;
+    // Shockwave from center
+    shockwaves.push({ x: CW / 2, y: CH / 2, radius: 10, maxRadius: Math.max(CW, CH) * 0.6, life: 1.0, color: '#fbbf24', innerColor: '#fff' });
+    // Second delayed shockwave
+    setTimeout(function() { shockwaves.push({ x: CW / 2, y: CH / 2, radius: 5, maxRadius: Math.max(CW, CH) * 0.45, life: 0.8, color: '#fde68a', innerColor: '#fbbf24' }); }, 150);
+    // HUGE burst of particles at center — 100 multi-color particles
+    var levelUpColors = ['#fbbf24', '#f59e0b', '#fde68a', '#fff', '#5eead4', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#c084fc'];
+    for (var lb = 0; lb < 100; lb++) {
+      var lbAngle = (lb / 100) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+      var lbSpeed = 3 + Math.random() * 7;
       particles.push({
-        x: CW / 2, y: CH / 2,
+        x: CW / 2 + (Math.random() - 0.5) * 20, y: CH / 2 + (Math.random() - 0.5) * 20,
         vx: Math.cos(lbAngle) * lbSpeed,
-        vy: Math.sin(lbAngle) * lbSpeed,
-        life: 1.2,
-        color: ['#fbbf24', '#f59e0b', '#fde68a', '#fff'][Math.floor(Math.random() * 4)],
-        size: 3 + Math.random() * 4,
-        shape: ['star', 'circle', 'triangle'][Math.floor(Math.random() * 3)],
+        vy: Math.sin(lbAngle) * lbSpeed - 1,
+        life: 1.5 + Math.random() * 0.8,
+        color: levelUpColors[Math.floor(Math.random() * levelUpColors.length)],
+        size: 3 + Math.random() * 6,
+        shape: ['star', 'circle', 'triangle', 'square'][Math.floor(Math.random() * 4)],
         rot: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 0.15
+        rotSpeed: (Math.random() - 0.5) * 0.2
       });
     }
     if (level > bestLevel) { bestLevel = level; saveProgress(); }
@@ -2917,6 +3007,57 @@ function drawDemoScreen(now) {
     ctx.fill();
   }
   ctx.globalAlpha = 1.0;
+
+  // Game over falling particle confetti — render on the overlay canvas
+  if (gameOverParticles.length > 0) {
+    var goCanvas = document.getElementById('goParticleCanvas');
+    if (goCanvas && goCanvas.offsetParent !== null) {
+      var goCtx = goCanvas.getContext('2d');
+      // Size canvas to match screen
+      if (goCanvas.width !== goCanvas.offsetWidth || goCanvas.height !== goCanvas.offsetHeight) {
+        goCanvas.width = goCanvas.offsetWidth;
+        goCanvas.height = goCanvas.offsetHeight;
+      }
+      goCtx.clearRect(0, 0, goCanvas.width, goCanvas.height);
+      for (var gpi = 0; gpi < gameOverParticles.length; gpi++) {
+        var gp = gameOverParticles[gpi];
+        gp.x += gp.vx;
+        gp.y += gp.vy;
+        gp.vx += gp.drift;
+        gp.rot += gp.rotSpeed;
+        // Wrap around when falling below screen
+        if (gp.y > goCanvas.height + 20) {
+          gp.y = -20;
+          gp.x = Math.random() * goCanvas.width;
+        }
+        goCtx.save();
+        goCtx.globalAlpha = 0.6;
+        goCtx.translate(gp.x, gp.y);
+        goCtx.rotate(gp.rot);
+        goCtx.fillStyle = gp.color;
+        if (gp.shape === 'star') {
+          goCtx.beginPath();
+          goCtx.moveTo(0, -gp.size);
+          goCtx.lineTo(gp.size * 0.3, -gp.size * 0.3);
+          goCtx.lineTo(gp.size, 0);
+          goCtx.lineTo(gp.size * 0.3, gp.size * 0.3);
+          goCtx.lineTo(0, gp.size);
+          goCtx.lineTo(-gp.size * 0.3, gp.size * 0.3);
+          goCtx.lineTo(-gp.size, 0);
+          goCtx.lineTo(-gp.size * 0.3, -gp.size * 0.3);
+          goCtx.closePath();
+          goCtx.fill();
+        } else if (gp.shape === 'square') {
+          goCtx.fillRect(-gp.size / 2, -gp.size / 2, gp.size, gp.size);
+        } else {
+          goCtx.beginPath();
+          goCtx.arc(0, 0, gp.size, 0, Math.PI * 2);
+          goCtx.fill();
+        }
+        goCtx.restore();
+      }
+    }
+  }
 }
 
 function loop(now) {
@@ -2937,6 +3078,16 @@ function loop(now) {
       dt = 16;
     }
     lastTime = now;
+
+    // Slow-motion death effect — when 3rd strike happens, slow everything briefly
+    if (gameOverDelayTimer > 0) {
+      gameOverDelayTimer -= dt;
+      dt *= 0.3; // slow-motion
+      if (gameOverDelayTimer <= 0) {
+        gameOverDelayTimer = 0;
+        triggerGameOver();
+      }
+    }
 
     // Countdown timer (item 20)
     if (countdownTimer > 0) {
@@ -3505,6 +3656,14 @@ function loop(now) {
       p.vy += 0.08;
       p.life -= 0.02;
       if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Update shockwaves
+    for (var i = shockwaves.length - 1; i >= 0; i--) {
+      var sw = shockwaves[i];
+      sw.radius += (sw.maxRadius - sw.radius) * 0.08;
+      sw.life -= 0.018;
+      if (sw.life <= 0) shockwaves.splice(i, 1);
     }
 
     // Update flashes
@@ -5413,6 +5572,30 @@ function loop(now) {
     }
     ctx.globalAlpha = 1.0;
 
+    // SHOCKWAVES — expanding rings that fade out
+    for (var i = 0; i < shockwaves.length; i++) {
+      var sw = shockwaves[i];
+      var swAlpha = Math.max(0, sw.life);
+      ctx.save();
+      ctx.globalAlpha = swAlpha * 0.6;
+      ctx.strokeStyle = sw.color || '#fbbf24';
+      ctx.lineWidth = Math.max(1, 4 * sw.life);
+      ctx.beginPath();
+      ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      // Inner ring
+      if (sw.life > 0.3) {
+        ctx.globalAlpha = swAlpha * 0.3;
+        ctx.strokeStyle = sw.innerColor || '#fff';
+        ctx.lineWidth = Math.max(1, 2 * sw.life);
+        ctx.beginPath();
+        ctx.arc(sw.x, sw.y, sw.radius * 0.7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1.0;
+
     // FLOATING TEXTS — simplified (single draw)
     for (var i = 0; i < texts.length; i++) {
       var t = texts[i];
@@ -5506,41 +5689,63 @@ function loop(now) {
 
     // Ambient gameplay vignette removed for performance
 
-    // Level-up screen flash — simplified to flat tint
+    // Level-up screen flash — bright gold/white burst
     if (levelUpFlash > 0) {
-      var flashProgress = levelUpFlash / 20;
-      ctx.globalAlpha = flashProgress * 0.2;
-      ctx.fillStyle = 'rgba(251, 191, 36, 0.5)';
+      var flashProgress = levelUpFlash / 30;
+      // White flash first, then gold
+      if (flashProgress > 0.7) {
+        ctx.globalAlpha = (flashProgress - 0.7) / 0.3 * 0.5;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, CW, CH);
+      }
+      ctx.globalAlpha = flashProgress * 0.35;
+      ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
       ctx.fillRect(0, 0, CW, CH);
       levelUpFlash--;
       ctx.globalAlpha = 1.0;
     }
 
-    // Level-up banner — simplified
+    // Level-up banner — dramatic scale-up animation
     if (levelUpBanner > 0) {
       levelUpBanner--;
-      var bannerAlpha = levelUpBanner < 20 ? levelUpBanner / 20 : Math.min(1, (120 - levelUpBanner) / 10);
-      var bannerScale = 1 + (levelUpBanner > 100 ? (120 - levelUpBanner) / 20 * 0.3 : 0);
+      var bannerAlpha = levelUpBanner < 25 ? levelUpBanner / 25 : Math.min(1, (150 - levelUpBanner) / 8);
+      // Dramatic scale: starts huge (2.5x), bounces to 1.0, slight overshoot
+      var bannerT = 1 - (levelUpBanner / 150);
+      var bannerScale;
+      if (bannerT < 0.15) {
+        bannerScale = 0.5 + bannerT / 0.15 * 2.0; // 0.5 -> 2.5 (zoom in)
+      } else if (bannerT < 0.3) {
+        bannerScale = 2.5 - (bannerT - 0.15) / 0.15 * 1.5; // 2.5 -> 1.0 (settle)
+      } else if (bannerT < 0.4) {
+        bannerScale = 1.0 + (bannerT - 0.3) / 0.1 * 0.15; // 1.0 -> 1.15 (overshoot)
+      } else if (bannerT < 0.5) {
+        bannerScale = 1.15 - (bannerT - 0.4) / 0.1 * 0.15; // 1.15 -> 1.0 (settle back)
+      } else {
+        bannerScale = 1.0;
+      }
       ctx.save();
       ctx.globalAlpha = bannerAlpha;
       ctx.translate(CW / 2, CH / 2 - 30);
       ctx.scale(bannerScale, bannerScale);
-      // Banner background — flat
-      ctx.fillStyle = 'rgba(30, 15, 0, 0.7)';
+      // Banner background — flat with glow
+      ctx.shadowColor = '#fbbf24';
+      ctx.shadowBlur = 20 * bannerAlpha;
+      ctx.fillStyle = 'rgba(30, 15, 0, 0.8)';
       ctx.beginPath();
-      ctx.roundRect(-130, -34, 260, 68, 18);
+      ctx.roundRect(-140, -38, 280, 76, 20);
       ctx.fill();
-      // Gold border
+      ctx.shadowBlur = 0;
+      // Gold border — thicker
       ctx.strokeStyle = '#fcd34d';
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.roundRect(-128, -32, 256, 64, 16);
+      ctx.roundRect(-138, -36, 276, 72, 18);
       ctx.stroke();
-      // Text
+      // Text — bigger
       ctx.fillStyle = '#fef3c7';
-      ctx.font = 'bold 34px sans-serif';
+      ctx.font = 'bold 42px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('LEVEL ' + levelUpBannerLevel, 0, 12);
+      ctx.fillText('LEVEL ' + levelUpBannerLevel + '!', 0, 15);
       ctx.restore();
     }
 
@@ -5610,9 +5815,16 @@ function loop(now) {
     }
     if (crashFlashTimer > 0) {
       ctx.save();
-      ctx.globalAlpha = (crashFlashTimer / 10) * 0.5;
+      var cfAlpha = Math.min(1, (crashFlashTimer / 10) * 0.5);
+      // Intense full-screen red flash for game over death (crashFlashTimer > 15)
+      if (crashFlashTimer > 15) {
+        ctx.globalAlpha = Math.min(1, (crashFlashTimer - 15) / 10) * 0.4;
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(0, 0, CW, CH);
+      }
+      ctx.globalAlpha = cfAlpha;
       ctx.strokeStyle = '#ff6b6b';
-      ctx.lineWidth = 8;
+      ctx.lineWidth = crashFlashTimer > 15 ? 14 : 8;
       ctx.strokeRect(4, 4, CW - 8, CH - 8);
       ctx.restore();
       crashFlashTimer--;
