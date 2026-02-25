@@ -2727,10 +2727,7 @@ function onCatch(obj) {
     levelUpFlash = 20;
     levelUpBanner = 120;
     levelUpBannerLevel = level;
-    // Smooth screen transition between levels — fade to black and back
-    levelTransitionPhase = 1; // start fade out
-    levelTransitionTimer = 300; // 300ms fade out
-    levelTransitionAlpha = 0;
+    // Level transition — no black screen, just keep playing
     // Encouraging message between levels
     levelMessage = encouragingMessages[Math.floor(Math.random() * encouragingMessages.length)];
     levelMessageTimer = 120; // display for ~2 seconds
@@ -2959,23 +2956,7 @@ function loop(now) {
       else { countdownPhase = 0; spawnTimer = 100; }
     }
 
-    // Level transition fade update
-    if (levelTransitionPhase > 0) {
-      levelTransitionTimer -= dt;
-      if (levelTransitionPhase === 1) {
-        // Fading out (to black)
-        levelTransitionAlpha = Math.min(1, 1 - levelTransitionTimer / 300);
-        if (levelTransitionTimer <= 0) { levelTransitionPhase = 2; levelTransitionTimer = 200; }
-      } else if (levelTransitionPhase === 2) {
-        // Hold black
-        levelTransitionAlpha = 1;
-        if (levelTransitionTimer <= 0) { levelTransitionPhase = 3; levelTransitionTimer = 300; }
-      } else if (levelTransitionPhase === 3) {
-        // Fading in (from black)
-        levelTransitionAlpha = Math.max(0, levelTransitionTimer / 300);
-        if (levelTransitionTimer <= 0) { levelTransitionPhase = 0; levelTransitionAlpha = 0; }
-      }
-    }
+    // Level transition fade (disabled — no black screen between levels)
 
     // Camera zoom (item 19)
     if (cameraZoomTimer > 0) {
@@ -5055,13 +5036,8 @@ function loop(now) {
       crashFlashTimer--;
     }
 
-    // Level transition fade overlay
-    if (levelTransitionPhase > 0) {
-      ctx.save();
-      ctx.globalAlpha = levelTransitionAlpha;
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, CW, CH);
-      ctx.restore();
+    // Level transition fade overlay (disabled — no black screen)
+    if (false) {
     }
 
     // Encouraging message between levels
